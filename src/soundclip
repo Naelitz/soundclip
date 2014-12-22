@@ -1,0 +1,53 @@
+#!/usr/bin/env python3
+
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+
+import sys
+import argparse
+from gi.repository import Gtk, Gst
+
+from SoundClip import __version__
+from SoundClip import gui
+
+
+def get_gtk_version():
+    return str(Gtk.get_major_version()) + "." + str(Gtk.get_minor_version()) + "." + str(Gtk.get_micro_version())
+
+
+def main():
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument("-v", "--version", help="Display the version number and exit", action="store_true")
+    parser.add_argument("-p", "--project", help="Specify the path to a project to open", type=str)
+
+    args = parser.parse_args()
+
+    if args.version:
+        print("SoundClip version " + __version__ + ". Using GTK+ " +
+              get_gtk_version() + " and " + Gst.version_string())
+        print("Copyright Nathan Lowe 2014. " +
+              "SoundClip is licensed under the terms of the GNU General Public License version 3.")
+        sys.exit(0)
+
+    Gtk.init(sys.argv)
+    Gst.init(sys.argv)
+
+    main_window = gui.SCMainWindow()
+    main_window.show_all()
+
+    Gtk.main()
+
+if __name__ == '__main__':
+    main()
