@@ -19,7 +19,7 @@ import argparse
 from gi.repository import Gtk, Gst
 
 from SoundClip import __version__
-from SoundClip import gui
+from SoundClip.gui import mainwindow
 
 
 def get_gtk_version():
@@ -44,7 +44,7 @@ def main():
     Gtk.init(sys.argv)
     Gst.init(sys.argv)
 
-    main_window = gui.SCMainWindow()
+    main_window = mainwindow.SCMainWindow()
     main_window.show_all()
 
     Gtk.main()

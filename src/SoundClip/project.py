@@ -10,15 +10,23 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+from gi.repository import GObject
 from SoundClip.cue import CueStack
 
 
-class Project(object):
-    def __init__(self):
-        self.name = "Untitled Project"
-        self.creator = ""
-        self.root = ""
-        self.cue_stack = CueStack()
+class Project(GObject.GObject):
+
+    name = GObject.Property(type=str)
+    creator = GObject.Property(type=str)
+    root = GObject.property(type=str)
+
+    def __init__(self, name="Untitled Project", creator="", root="", cue_stacks=None):
+        GObject.GObject.__init__(self)
+        self.name = name
+        self.creator = creator
+        self.root = root
+        self.cue_stacks = [CueStack(), ] if cue_stacks is None else cue_stacks
 
     def close(self):
         # TODO: Stop all playing cues
