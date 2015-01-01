@@ -28,6 +28,12 @@ class PlaybackActionType(Enum):
     FADE_OUT = 4
 
 
+class PlaybackState(Enum):
+    STOPPED = 0
+    PLAYING = 1
+    PAUSED = 2
+
+
 class Cue(GObject.GObject):
     """
     The base cue object
@@ -38,10 +44,13 @@ class Cue(GObject.GObject):
     name = GObject.Property(type=str)
     description = GObject.Property(type=str)
     notes = GObject.Property(type=str)
-    number = GObject.Property(type=float, default=-1.0)
-    pre_wait = GObject.Property(type=GObject.TYPE_LONG, default=0)
-    post_wait = GObject.Property(type=GObject.TYPE_LONG, default=0)
-    autofollow_target = GObject.Property(type=GObject.TYPE_OBJECT, default=None)
+    number = GObject.Property(type=float)
+    pre_wait = GObject.Property(type=GObject.TYPE_LONG)
+    post_wait = GObject.Property(type=GObject.TYPE_LONG)
+    autofollow_target = GObject.Property(type=object)
+    autofollow_type = GObject.Property(type=object)
+    current_hash = GObject.Property(type=str)
+    last_hash = GObject.Property(type=str)
 
     def __init__(self, name="Untitled Cue", description="", notes="", number=-1.0, pre_wait=0, post_wait=0,
                  autofollow_target=None, autofollow_type=AutoFollowType.StandBy):
@@ -55,6 +64,9 @@ class Cue(GObject.GObject):
         self.autofollow_target = autofollow_target
         self.autofollow_type = autofollow_type
 
+    def __len__(self):
+        return self.duration()
+
     def go(self):
         pass
 
@@ -66,7 +78,23 @@ class Cue(GObject.GObject):
 
     @GObject.property
     def duration(self):
-        pass
+        return 1000
+
+    @GObject.property
+    def elapsed_prewait(self):
+        return 0
+
+    @GObject.property
+    def elapsed(self):
+        return 0
+
+    @GObject.property
+    def elapsed_postwait(self):
+        return 0
+
+    @GObject.property
+    def state(self):
+        return PlaybackState.STOPPED
 GObject.type_register(Cue)
 
 
@@ -105,12 +133,16 @@ GObject.type_register(ControlCue)
 class CueStack(GObject.GObject):
 
     name = GObject.property(type=str)
+    current_hash = GObject.property(type=str)
+    last_hash = GObject.property(type=str)
 
-    def __init__(self, name="Default Cue Stack", cues=None):
+    def __init__(self, name="Default Cue Stack", cues=None, current_hash=None, last_hash=None):
         GObject.GObject.__init__(self)
         self.name = name
+        self.current_hash = current_hash
+        self.last_hash = last_hash
         # TODO: Once we're done debugging the layout, remote this default cue, the list should start empty
-        self.__cues = [Cue(description="This is a default cue. You should change it!"), ] if cues is None else cues
+        self.__cues = [Cue(description="This is a default cue. You should change it!", pre_wait=500), ] if cues is None else cues
         pass
 
     def __len__(self):
@@ -126,7 +158,7 @@ class CueStack(GObject.GObject):
         return self.__cues.__iter__()
 
     def __reversed__(self):
-        return reversed(self.__cues)
+        return CueStack(name=self.name, cues=reversed(self.__cues))
 
     def __contains__(self, item):
         return item in self.__cues
