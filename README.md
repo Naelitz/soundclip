@@ -16,7 +16,7 @@ Below is a list of features I want to add, listed in order of importance
 * [ ] MIDI Cues?
 * [ ] Developer Library / Plugins / Custom Cue support
 
-At some point, I intend to setup a [development blog](https://techwiz24.github.io/soundclip/blog) to track these goals.
+At some point, I intend to setup a [development blog](https://techwiz24.github.io/soundclip) to track these goals.
 
 ## License
 This program is free software: you can redistribute it and/or modify
