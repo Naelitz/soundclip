@@ -13,15 +13,16 @@
 
 from gi.repository import Gtk
 from gi.repository import GObject
-from SoundClip.cue import AutoFollowType
+from SoundClip import util
+from SoundClip.cue import PlaybackState
 
 
 class SCCueListModel(Gtk.TreeStore):
     """
     """
 
-    column_types = (str, str, str, float, GObject.TYPE_LONG, GObject.TYPE_LONG, GObject.TYPE_OBJECT,
-                    GObject.TYPE_OBJECT)
+    column_types = (str, str, str, float, float, str, float, str, float, str,
+                    GObject.TYPE_OBJECT, GObject.TYPE_OBJECT)
 
     def __init__(self, cue_list):
         super().__init__()
@@ -48,17 +49,35 @@ class SCCueListModel(Gtk.TreeStore):
     def do_get_path(self, itr):
         return Gtk.TreePath([itr.user_data])
 
+    @staticmethod
+    def __elapsed_pre(cue):
+        return util.timefmt(cue.elapsed_prewait if cue.state is not PlaybackState.STOPPED else cue.pre_wait)
+
+    @staticmethod
+    def __elapsed(cue):
+        return util.timefmt(cue.elapsed if cue.state is not PlaybackState.STOPPED else cue.duration)
+
+    @staticmethod
+    def __elapsed_post(cue):
+        return util.timefmt(cue.elapsed_postwait if cue.state is not PlaybackState.STOPPED else cue.post_wait)
+
     def do_get_value(self, itr, column):
-        # TODO: What to do here?
         return {
             0: self.__cue_list[itr.user_data].name,
             1: self.__cue_list[itr.user_data].description,
             2: self.__cue_list[itr.user_data].notes,
             3: self.__cue_list[itr.user_data].number,
-            4: self.__cue_list[itr.user_data].pre_wait,
-            5: self.__cue_list[itr.user_data].post_wait,
-            6: self.__cue_list[itr.user_data].autofollow_target,
-            7: self.__cue_list[itr.user_data].autofollow_type,
+            4: 0 if self.__cue_list[itr.user_data].pre_wait is 0 else self.__cue_list[itr.user_data].elapsed_prewait /
+                                                                      self.__cue_list[itr.user_data].pre_wait,
+            5: self.__elapsed_pre(self.__cue_list[itr.user_data]),
+            6: 0 if self.__cue_list[itr.user_data].duration is 0 else self.__cue_list[itr.user_data].elapsed /
+                                                                      self.__cue_list[itr.user_data].duration,
+            7: self.__elapsed(self.__cue_list[itr.user_data]),
+            8: 0 if self.__cue_list[itr.user_data].post_wait is 0 else self.__cue_list[itr.user_data].elapsed_postwait /
+                                                                      self.__cue_list[itr.user_data].post_wait,
+            9: self.__elapsed_post(self.__cue_list[itr.user_data]),
+            10: self.__cue_list[itr.user_data].autofollow_target,
+            11: self.__cue_list[itr.user_data].autofollow_type,
         }.get(column, None)
 
     def do_iter_next(self, itr):
@@ -115,7 +134,7 @@ class SCCueList(Gtk.TreeView):
         self.set_model(self.__model)
 
         self.__number_col_renderer = Gtk.CellRendererText()
-        self.__number_col = Gtk.TreeViewColumn(title="#", cell_renderer=self.__number_col_renderer, text=4)
+        self.__number_col = Gtk.TreeViewColumn(title="#", cell_renderer=self.__number_col_renderer, text=3)
         self.append_column(self.__number_col)
 
         self.__name_col_renderer = Gtk.CellRendererText()
@@ -125,15 +144,17 @@ class SCCueList(Gtk.TreeView):
         self.__desc_col_renderer = Gtk.CellRendererText()
         self.__desc_col = Gtk.TreeViewColumn(title="Description", cell_renderer=self.__desc_col_renderer, text=1)
         self.append_column(self.__desc_col)
-        
+
         self.__prew_col_renderer = Gtk.CellRendererProgress()
-        self.__prew_col = Gtk.TreeViewColumn(title="Pre-Wait", cell_renderer=self.__prew_col_renderer)
+        self.__prew_col = Gtk.TreeViewColumn(title="Pre Wait", cell_renderer=self.__prew_col_renderer, value=4, text=5)
         self.append_column(self.__prew_col)
-        
+
         self.__duration_col_renderer = Gtk.CellRendererProgress()
-        self.__duration_col = Gtk.TreeViewColumn(title="Duration", cell_renderer=self.__duration_col_renderer)
+        self.__duration_col = Gtk.TreeViewColumn(title="Action", cell_renderer=self.__duration_col_renderer, value=6,
+                                                 text=7)
         self.append_column(self.__duration_col)
-        
+
         self.__postw_col_renderer = Gtk.CellRendererProgress()
-        self.__postw_col = Gtk.TreeViewColumn(title="Post-Wait", cell_renderer=self.__postw_col_renderer)
+        self.__postw_col = Gtk.TreeViewColumn(title="Post Wait", cell_renderer=self.__postw_col_renderer, value=8,
+                                              text=9)
         self.append_column(self.__postw_col)

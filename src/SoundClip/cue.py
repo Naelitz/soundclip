@@ -12,7 +12,10 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from enum import Enum
+import os
 from gi.repository import GObject
+from SoundClip import storage
+from SoundClip.storage import read
 
 
 class AutoFollowType(Enum):
@@ -95,6 +98,27 @@ class Cue(GObject.GObject):
     @GObject.property
     def state(self):
         return PlaybackState.STOPPED
+
+    def load(self, root, key, j):
+        self.name = j['name'] if 'name' in j else "Untitled Cue"
+        self.description = j['description'] if 'description' in j else ""
+        self.notes = j['notes'] if 'notes' in j else ""
+        self.number = float(j['number']) if 'number' in j else -1.0
+        self.pre_wait = int(j['preWait']) if 'preWait' in j else 0
+        self.post_wait = int(j['postWait']) if 'postWait' in j else 0
+    
+        # TODO: Best way to link a checksum to the proper instance of the cue object
+        self.autofollow_target = j['autoFollowTarget'] if 'autoFollowTarget' in j else ""
+    
+        self.autofollow_type = AutoFollowType.Trigger if 'autoFollowType' in j and j['autoFollowType'] is 1 else \
+            AutoFollowType.StandBy
+    
+        self.current_hash = key
+        self.last_hash = j['previousRevision'] if 'previousRevision' in j else None
+
+    @staticmethod
+    def store():
+        pass
 GObject.type_register(Cue)
 
 
@@ -122,12 +146,41 @@ class AudioCue(Cue):
         self.gain = gain
         self.fade_in_time = fade_in_time
         self.fade_out_time = fade_out_time
+    
+    def load(self, root, key, j):
+        super().load(root, key, j)
+        
+        self.audio_source_uri = j['src'] if 'src' in j else ""
+    
+        if not os.path.exists(os.path.join(root, self.audio_soruce_uri)):
+            # TODO: Warn about nonexistent audio file source
+            pass
+    
+        self.pitch = float(j['pitch']) if 'pitch' in j else 0.0
+        self.pan = float(j['pan']) if 'pan' in j else 0.0
+        self.gain = float(j['gain']) if 'gain' in j else 0.0
+        self.fade_in_time = int(j['fadeInTime']) if 'fadeInTime' in j else 0
+        self.fade_out_time = int(j['fadeOutTime']) if 'fadeOutTime' in j else 0
 GObject.type_register(AudioCue)
 
 
 class ControlCue(Cue):
     pass
 GObject.type_register(ControlCue)
+
+
+def load_cue(root, key):
+    j = storage.read(root, key)
+    if 'type' not in j:
+        # TODO: Malformed Cue Exception: Cue does nto specify type error
+        return
+
+    t = j['type']
+    if t is 'audio':
+        return AudioCue().load(root, key, j)
+    else:
+        # TODO: Unknown Cue Type. Missing plugin?
+        return Cue().load(root, key, j)
 
 
 class CueStack(GObject.GObject):
@@ -142,7 +195,7 @@ class CueStack(GObject.GObject):
         self.current_hash = current_hash
         self.last_hash = last_hash
         # TODO: Once we're done debugging the layout, remote this default cue, the list should start empty
-        self.__cues = [Cue(description="This is a default cue. You should change it!", pre_wait=500), ] if cues is None else cues
+        self.__cues = [Cue(description="This is a default cue. You should change it!", number=1, pre_wait=500), ] if cues is None else cues
         pass
 
     def __len__(self):
@@ -168,3 +221,20 @@ class CueStack(GObject.GObject):
 
     def __isub__(self, other):
         self.__cues.remove(other)
+
+    @staticmethod
+    def load(root, key):
+        j = read(root, key)
+
+        name = j['name'] if 'name' in j else "Untitled Cue Stack"
+        current_hash = key
+        last_hash = j['previousRevision'] if 'previousRevision' in j else None
+        cues = []
+        if 'cues' in j:
+            for cue in j['cues']:
+                cues += load_cue(root, cue)
+
+        return CueStack(name=name, cues=cues, current_hash=current_hash, last_hash=last_hash)
+
+    def store(self):
+        pass

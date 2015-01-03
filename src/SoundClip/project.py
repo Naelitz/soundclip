@@ -11,16 +11,14 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import json
-
 import os
 
 from gi.repository import GObject
+
 from SoundClip.cue import CueStack
-from SoundClip.storage.parser import parse_project
 
 
 class Project(GObject.GObject):
-
     name = GObject.Property(type=str)
     creator = GObject.Property(type=str)
     root = GObject.property(type=str)
@@ -44,8 +42,37 @@ class Project(GObject.GObject):
         pass
 
     @staticmethod
-    def from_disk(path):
-        return parse_project(path)
+    def load(path):
+        if not os.path.isdir(os.path.join(path, ".soundclip")):
+            raise FileNotFoundError("Path does not exist or not a soundclip project")
 
-    def as_dict(self):
-        return {'name': self.name, 'creator': self.creator}
+        with open(os.path.join(path, ".soundclip", "project.json"), "rt") as dbobj:
+            content = dbobj.read()
+
+        if not content:
+            # TODO: Corrupted Project: project.json is empty
+            return
+
+        j = json.loads(content)
+
+        name = j['name'] if 'name' in j else "Untitled Project"
+        creator = j['creator'] if 'creator' in j else ""
+        last_hash = j['previousRevision'] if 'previousRevision' in j else None
+
+        stacks = []
+        if 'stacks' in j:
+            for key in j['stacks']:
+                stacks += CueStack.load(path, key)
+
+        return Project(name=name, creator=creator, root=path, cue_stacks=stacks, current_hash=sha(content),
+                       last_hash=last_hash)
+
+    def store(self):
+        d = {'name': self.name, 'creator': self.creator, 'stacks': []}
+
+        for stack in self.cue_stacks:
+            stack_hash = stack.store(stack)
+            d['stacks'] += stack_hash
+
+            with open(os.path.join(self.root, 'project.json'), 'w') as f:
+                json.dump(d, f)

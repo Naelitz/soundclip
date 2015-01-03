@@ -28,7 +28,7 @@ class SCActiveCueList(Gtk.Box):
         self.__active_cues = []
         self.__no_active_cues_label = Gtk.Label("No Active Cues")
         self.set_orientation(Gtk.Orientation.VERTICAL)
-        self.add(self.__no_active_cues_label)
+        self.pack_start(self.__no_active_cues_label, True, True, 0)
 
     def on_cue_playback_update(self, cue, action):
         if action is PlaybackActionType.STOP:
@@ -39,7 +39,7 @@ class SCActiveCueList(Gtk.Box):
             self.__active_cues.insert(0, cue)
 
         if len(self.__active_cues) == 0:
-            self.add(self.__no_active_cues_label)
+            self.pack_start(self.__no_active_cues_label, True, True, 0)
 
 
 class SCCueListContainer(Gtk.Notebook):
