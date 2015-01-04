@@ -39,21 +39,25 @@ class SCMainWindow(Gtk.Window):
         self.__active_cues = SCActiveCueList()
         self.__grid.attach(self.__active_cues, 7, 0, 3, 1)
 
-        self.project = Project() if project is None else project
-        self.change_project(self.project)
+        self.__project = Project() if project is None else project
+        self.change_project(self.__project)
 
         self.set_size_request(800, 600)
         self.connect("delete-event", Gtk.main_quit)
 
     def change_project(self, p: Project):
-        if self.project is not None:
-            self.project.close()
-        self.project = p
+        if self.__project is not None:
+            self.__project.close()
+        self.__project = p
 
-        self.__cue_lists.on_project_changed(self.project)
+        self.__cue_lists.on_project_changed(self.__project)
 
         self.title_bar.set_subtitle(("*" if not p.root else "") + p.name)
         pass
+
+    @property
+    def project(self):
+        return self.__project
 
     def send_stop_all(self):
         self.__cue_lists.send_stop_all()

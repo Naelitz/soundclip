@@ -16,6 +16,7 @@ import os
 from gi.repository import GObject
 
 from SoundClip.cue import CueStack
+from SoundClip.util import sha
 
 
 class Project(GObject.GObject):
@@ -62,17 +63,21 @@ class Project(GObject.GObject):
         stacks = []
         if 'stacks' in j:
             for key in j['stacks']:
-                stacks += CueStack.load(path, key)
+                stacks.append(CueStack.load(path, key))
 
         return Project(name=name, creator=creator, root=path, cue_stacks=stacks, current_hash=sha(content),
                        last_hash=last_hash)
 
     def store(self):
+        if not self.root:
+            # TODO: Project must have root before saving
+            return
         d = {'name': self.name, 'creator': self.creator, 'stacks': []}
 
         for stack in self.cue_stacks:
-            stack_hash = stack.store(stack)
-            d['stacks'] += stack_hash
+            d['stacks'].append(stack.store(self.root))
 
-            with open(os.path.join(self.root, 'project.json'), 'w') as f:
-                json.dump(d, f)
+        with open(os.path.join(self.root, '.soundclip', 'project.json'), 'w') as f:
+            json.dump(d, f)
+
+        print("Project", self.name, "saved to", self.root)

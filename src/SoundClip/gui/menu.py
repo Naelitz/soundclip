@@ -64,7 +64,8 @@ class SCHeaderBar(Gtk.HeaderBar):
 
         self.pack_end(Gtk.Separator(orientation=Gtk.Orientation.VERTICAL))
 
-        self.__panic_button = Gtk.Button.new_from_icon_name("dialog-warning", Gtk.IconSize.SMALL_TOOLBAR) #TODO: Specify icon
+        self.__panic_button = Gtk.Button.new_from_icon_name("dialog-warning",
+                                                            Gtk.IconSize.SMALL_TOOLBAR)  # TODO: Specify icon
         self.__panic_button.set_tooltip_text("PANIC: Stop all automations and cues")
         self.__panic_button.connect("clicked", self.on_panic)
         self.pack_end(self.__panic_button)
@@ -73,7 +74,25 @@ class SCHeaderBar(Gtk.HeaderBar):
         print("TODO: DO_NEW_PROJECT")
 
     def on_save_as(self, button):
-        print("TODO: DO_SAVE_AS")
+        root = self.__main_window.project.root
+
+        if not root:
+            dialog = Gtk.FileChooserDialog("Please choose a folder", self.__main_window,
+                                           Gtk.FileChooserAction.SELECT_FOLDER,
+                                           (Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL, "Select", Gtk.ResponseType.OK))
+            dialog.set_default_size(800, 400)
+
+            result = dialog.run()
+            if result == Gtk.ResponseType.OK:
+                root = dialog.get_filename()
+                print("Saving to", root)
+                self.__main_window.project.root = root
+            elif result == Gtk.ResponseType.CANCEL:
+                print("CANCEL")
+
+            dialog.destroy()
+
+        self.__main_window.project.store()
 
     def on_add_cue(self, button):
         print("TODO: DO_ADD_CUE")
@@ -104,5 +123,5 @@ class SCPopoverMenu(Gtk.Popover):
         self.bind_model(self.__model)
 
         self.__about_action = Gio.SimpleAction.new('about-action', None)
-        self.__about_action.connect("activate", lambda obj,btn: print("Foo!"))
+        self.__about_action.connect("activate", lambda obj, btn: print("Foo!"))
         self.__model.append("About", "app.about-action")

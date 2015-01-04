@@ -21,4 +21,4 @@ def timefmt(ms):
 
 
 def sha(s: str):
-    return hashlib.sha1(bytes(s)).hexdigest()
+    return hashlib.sha1(s.encode('utf-8')).hexdigest()

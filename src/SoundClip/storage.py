@@ -10,6 +10,25 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+"""
+Sound Clip on disk project format
+
+Inspired by git, cues and cue stacks are stored as abstract objects with their hash as their name on disk
+Example disk format:
+
+.soundclip/
+├── objects
+│   ├── 7b
+│   │   └── 3fb93c9f3ccbeeb5e6495f9cae38a0c103dcac
+│   └── de
+│       └── 10623d88eb2f3c4e9e02301901f329ff9bb56c
+└── project.json
+
+Cues are serialized to json by the serializer for their specific type. All cues and cuelists contain a pointer to their
+previous revisions
+"""
+
 import json
 import os
 
@@ -28,7 +47,7 @@ def read(root, checksum):
     """
 
     key = sha(checksum)
-    path = os.path.join(root, key[0:2], key[3:40])
+    path = os.path.join(root, '.soundclip', 'objects', key[0:2], key[2:40])
     if not os.path.exists(path):
         raise FileNotFoundError("The specified object doesn't exist in the database!")
 
@@ -44,7 +63,7 @@ def read(root, checksum):
     return json.loads(content)
 
 
-def write(root, d):
+def write(root, d, current_hash):
     """
     Writes an object to the database, returning its sha1 checksum. Like git, objects are keyed by the sha1 hash of their
     content. The first two bytes of the hash refer to the sub directory of the objects store, the remaining 40 bytes
@@ -54,12 +73,23 @@ def write(root, d):
     :param d: The dictionary to serialize
     :return: the sha1 checksum that refers to this project
     """
-    s = json.dumps(d)
-    key = sha(s)
 
-    os.makedirs(os.path.join(root, key[0:2]))
+    # TODO: Do we need to sort the dictionary so objects with no change always have the same hash?
 
-    with open(os.path.join(root, key[0:2], key[3:40]), "w") as f:
+    s = json.dumps(sorted(d))
+    checksum = sha(s)
+
+    # No need to write duplicate objects
+    if checksum is current_hash and os.path.exists(os.path.join(root, '.soundclip', 'objects', checksum)):
+        return checksum, d['previousRevision']
+
+    d['previousRevision'] = current_hash
+
+    path = os.path.join(root, '.soundclip', 'objects', checksum[0:2])
+    os.makedirs(path)
+    object_path = os.path.join(path, checksum[2:40])
+    print("Writing", object_path)
+    with open(object_path, "w") as f:
         json.dump(d, f)
 
-    return key
+    return checksum, current_hash
