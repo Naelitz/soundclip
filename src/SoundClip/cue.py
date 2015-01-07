@@ -91,6 +91,14 @@ class Cue(GObject.GObject):
         return PlaybackState.STOPPED
 
     def load(self, root, key, j):
+        """
+        Completes the loading of this cue from the specified json dictionary. Make sure you chain up to this super
+        method to set the common properties
+
+        :param root: The project's root folder
+        :param key: The hash this object was loaded from
+        :param j: The json dictionary parsed from the object store
+        """
         self.name = j['name'] if 'name' in j else "Untitled Cue"
         self.description = j['description'] if 'description' in j else ""
         self.notes = j['notes'] if 'notes' in j else ""
@@ -102,6 +110,16 @@ class Cue(GObject.GObject):
         self.last_hash = j['previousRevision'] if 'previousRevision' in j else None
 
     def store(self, root, d):
+        """
+        Stores the cue in the object repository. If you are creating a custom sub class, make sure you chain up to this
+        super method as the last call in your cue's `store` method. This writes the common properties and saves the cue
+        to the object store
+
+        :param root: The project root path
+        :param d: A dictionary of properties to serialize. Use this when chaining up to super methods
+        :return: the hash that this cue was written to the repository to. If the has returned matches the `current_hash`
+                    of this cue before storing it, the cue has not changed and no write has taken place for this object
+        """
         d['name'] = self.name
         d['description'] = self.description
         d['notes'] = self.notes
@@ -113,6 +131,27 @@ class Cue(GObject.GObject):
         self.current_hash, self.last_hash = write(root, d, self.current_hash)
 
         return self.current_hash
+
+    def get_editor(self):
+        """
+        Should return a GTK.Widget containing the widgets to create or edit this cue. The widget is returned when the
+        editor is closed to `on_editor_closed`. You are responsible for maping the widgets back to the properties of
+        custom cues.
+
+        Properties handled by the `Cue` base class do not need to be accounted for, they are handled by SoundClip
+        directly
+        """
+        pass
+
+    def on_editor_closed(self, w):
+        """
+        Called when the cue editor is closed, and returns the widget passed in `get_editor`. If you are implementing
+        a custom cue, you should pull the property values from the widget here and apply them to the cue.
+
+        Properties handled by the `Cue` base class do not need to be accounted for, they are handled by SoundClip
+        directly
+        """
+        pass
 GObject.type_register(Cue)
 
 
@@ -173,6 +212,13 @@ GObject.type_register(ControlCue)
 
 
 def load_cue(root, key):
+    """
+    Loads the cue identified by the specified hash from the object store and initializes the cue according to its type
+
+    :param root: The project's root folder
+    :param key: The hash identifier of the cue to load
+    :return: The cue identified by the specified hash
+    """
     j = storage.read(root, key)
     if 'type' not in j:
         # TODO: Malformed Cue Exception: Cue does nto specify type error
@@ -198,7 +244,11 @@ class CueStack(GObject.GObject):
         self.last_hash = last_hash
         # TODO: Once we're done debugging the layout, remote this default cue, the list should start empty
         self.__cues = [Cue(description="This is a default cue. You should change it!", number=1,
-                           pre_wait=500), ] if cues is None else cues
+                           pre_wait=500),
+                       Cue(name="test", description="Another Cue", number=2,
+                           pre_wait=5200),
+                       Cue(name="Third!", description="And a third!", number=2,
+                           pre_wait=31260)] if cues is None else cues
         pass
 
     def __len__(self):
@@ -243,8 +293,13 @@ class CueStack(GObject.GObject):
         cues = []
 
         for cue in self.__cues:
+            print("Storing", cue.name)
             cues.append(cue.store(root, {}))
 
         self.current_hash, self.last_hash = write(root, {'name': self.name, 'cues': cues,
                                                          'previousRevision': self.last_hash}, self.current_hash)
         return self.current_hash
+
+    def stop_all(self):
+        for cue in self.__cues:
+            cue.stop()

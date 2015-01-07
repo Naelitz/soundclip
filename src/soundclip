@@ -44,6 +44,8 @@ def main():
     Gtk.init(sys.argv)
     Gst.init(sys.argv)
 
+    Gtk.Settings.get_default().set_property('gtk-application-prefer-dark-theme', True)
+
     main_window = mainwindow.SCMainWindow()
     main_window.show_all()
 

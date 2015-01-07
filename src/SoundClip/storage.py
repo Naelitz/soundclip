@@ -19,10 +19,14 @@ Example disk format:
 
 .soundclip/
 ├── objects
-│   ├── 7b
-│   │   └── 3fb93c9f3ccbeeb5e6495f9cae38a0c103dcac
-│   └── de
-│       └── 10623d88eb2f3c4e9e02301901f329ff9bb56c
+│   ├── 26
+│   │   └── 79b924e4d0323d587b853d054c69b650b21430
+│   ├── 29
+│   │   └── 4dde0494c57b0ea544c5d3d128ad61f0e21862
+│   ├── 5f
+│   │   └── 9cc9f575bdc32c06614890e0b500c20ab726ea
+│   └── a3
+│       └── 7d877b431d098389042e10457756da151ae565
 └── project.json
 
 Cues are serialized to json by the serializer for their specific type. All cues and cuelists contain a pointer to their
@@ -76,7 +80,8 @@ def write(root, d, current_hash):
 
     # TODO: Do we need to sort the dictionary so objects with no change always have the same hash?
 
-    s = json.dumps(sorted(d))
+    s = json.dumps(d, sort_keys=True)
+    print("JSON:", s)
     checksum = sha(s)
 
     # No need to write duplicate objects
@@ -86,7 +91,10 @@ def write(root, d, current_hash):
     d['previousRevision'] = current_hash
 
     path = os.path.join(root, '.soundclip', 'objects', checksum[0:2])
-    os.makedirs(path)
+
+    if not os.path.exists(path):
+        os.makedirs(path)
+
     object_path = os.path.join(path, checksum[2:40])
     print("Writing", object_path)
     with open(object_path, "w") as f:

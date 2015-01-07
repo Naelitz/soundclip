@@ -12,34 +12,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from gi.repository import Gtk
-from SoundClip.cue import PlaybackActionType
 from SoundClip.gui.cuelist import SCCueList
-
-
-class SCActiveCueList(Gtk.Box):
-    """
-    A list displaying cues that are currently running, including duration, volume, and progress
-
-    TODO: Make hideable via a Revealer and/or popout to separate window, 'No Active Cues' needs to be centered
-    """
-
-    def __init__(self, **properties):
-        super().__init__(**properties)
-        self.__active_cues = []
-        self.__no_active_cues_label = Gtk.Label("No Active Cues")
-        self.set_orientation(Gtk.Orientation.VERTICAL)
-        self.pack_start(self.__no_active_cues_label, True, True, 0)
-
-    def on_cue_playback_update(self, cue, action):
-        if action is PlaybackActionType.STOP:
-            self.__active_cues.remove(cue)
-        elif cue not in self.__active_cues:
-            if len(self.__active_cues) == 0:
-                self.remove(self.__no_active_cues_label)
-            self.__active_cues.insert(0, cue)
-
-        if len(self.__active_cues) == 0:
-            self.pack_start(self.__no_active_cues_label, True, True, 0)
 
 
 class SCCueListContainer(Gtk.Notebook):
@@ -50,11 +23,12 @@ class SCCueListContainer(Gtk.Notebook):
     def __init__(self, w, **properties):
         super().__init__(**properties)
         self.__main_window = w
+        self.set_hexpand(True)
+        self.set_halign(Gtk.Align.FILL)
+        self.set_vexpand(True)
+        self.set_valign(Gtk.Align.FILL)
 
     def on_project_changed(self, p):
         for stack in p.cue_stacks:
             self.append_page(SCCueList(stack), Gtk.Label(stack.name))
         self.set_show_tabs(True if self.get_n_pages() > 1 else False)
-
-    def send_stop_all(self):
-        pass

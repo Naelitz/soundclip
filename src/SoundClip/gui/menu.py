@@ -12,7 +12,6 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from gi.repository import Gtk, Gio
-from SoundClip import __version__
 
 
 class SCHeaderBar(Gtk.HeaderBar):
@@ -25,8 +24,6 @@ class SCHeaderBar(Gtk.HeaderBar):
 
         self.__main_window = w
 
-        self.set_title("SoundClip " + __version__)
-        self.set_subtitle("Unknown Project")
         self.set_show_close_button(True)
 
         self.__new_project_button = Gtk.Button.new_from_icon_name("document-new", Gtk.IconSize.SMALL_TOOLBAR)
@@ -93,9 +90,11 @@ class SCHeaderBar(Gtk.HeaderBar):
             dialog.destroy()
 
         self.__main_window.project.store()
+        self.__main_window.update_title()
 
     def on_add_cue(self, button):
         print("TODO: DO_ADD_CUE")
+        # dialog = CueDialog(self.__main_window)
 
     def on_panic(self, button):
         """

@@ -10,15 +10,29 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
 from gi.repository import Gtk
 
 
-class SCActiveCue(Gtk.Box):
-    """
-    A widget representing a cue that is currently executing, automating, or paused
-    """
+class CueDialog(Gtk.Dialog):
+    def __init__(self, w, c, **properties):
+        super().init("Cue Editor", w, 0,
+                     (Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL, Gtk.STOCK_OK, Gtk.ResponseType.OK), **properties)
 
-    def __init__(self, cue, **properties):
-        super().__init__(**properties)
-        self.__cue = cue
+        self.__main_window = w
+        self.__cue = c
+        self.__editor = self.__cue.get_editor()
+
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+
+        # TODO: Common Cue Editor
+
+        box.add(self.__editor)
+
+        self.get_content_area().add(box)
+        self.set_modal(True)
+
+    def get_custom_editor(self):
+        return self.__editor
+
+    def get_cue(self):
+        return self.__cue

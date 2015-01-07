@@ -12,7 +12,6 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from gi.repository import Gtk
-from gi.repository import GObject
 from SoundClip import util
 from SoundClip.cue import PlaybackState
 
@@ -21,8 +20,7 @@ class SCCueListModel(Gtk.TreeStore):
     """
     """
 
-    column_types = (str, str, str, float, float, str, float, str, float, str)
-                    #  GObject.TYPE_OBJECT, GObject.TYPE_OBJECT)
+    column_types = (str, str, str, str, float, str, float, str, float, str)
 
     def __init__(self, cue_list):
         super().__init__()
@@ -66,7 +64,7 @@ class SCCueListModel(Gtk.TreeStore):
             0: self.__cue_list[itr.user_data].name,
             1: self.__cue_list[itr.user_data].description,
             2: self.__cue_list[itr.user_data].notes,
-            3: self.__cue_list[itr.user_data].number,
+            3: '{0:g}'.format(self.__cue_list[itr.user_data].number),
             4: 0 if self.__cue_list[itr.user_data].pre_wait is 0 else self.__cue_list[itr.user_data].elapsed_prewait /
                                                                       self.__cue_list[itr.user_data].pre_wait,
             5: self.__elapsed_pre(self.__cue_list[itr.user_data]),
@@ -76,8 +74,6 @@ class SCCueListModel(Gtk.TreeStore):
             8: 0 if self.__cue_list[itr.user_data].post_wait is 0 else self.__cue_list[itr.user_data].elapsed_postwait /
                                                                       self.__cue_list[itr.user_data].post_wait,
             9: self.__elapsed_post(self.__cue_list[itr.user_data]),
-            # 10: self.__cue_list[itr.user_data].autofollow_target,
-            # 11: self.__cue_list[itr.user_data].autofollow_type,
         }.get(column, None)
 
     def do_iter_next(self, itr):
@@ -124,6 +120,8 @@ class SCCueListModel(Gtk.TreeStore):
 class SCCueList(Gtk.TreeView):
     """
     A graphical representation of a cue list
+
+    TODO: How do I get the bloody columns to size properly?
     """
 
     def __init__(self, cue_list, **properties):
@@ -135,32 +133,47 @@ class SCCueList(Gtk.TreeView):
 
         self.__number_col_renderer = Gtk.CellRendererText()
         self.__number_col = Gtk.TreeViewColumn(title="#", cell_renderer=self.__number_col_renderer, text=3)
+        self.__number_col.set_fixed_width(64)
         self.__number_col.set_alignment(0.5)
         self.append_column(self.__number_col)
 
         self.__name_col_renderer = Gtk.CellRendererText()
         self.__name_col = Gtk.TreeViewColumn(title="Name", cell_renderer=self.__name_col_renderer, text=0)
         self.__name_col.set_alignment(0.5)
+        self.__name_col.set_sizing(Gtk.TreeViewColumnSizing.AUTOSIZE)
+        self.__name_col.set_expand(False)
         self.append_column(self.__name_col)
 
         self.__desc_col_renderer = Gtk.CellRendererText()
         self.__desc_col = Gtk.TreeViewColumn(title="Description", cell_renderer=self.__desc_col_renderer, text=1)
         self.__desc_col.set_alignment(0.5)
+        self.__desc_col.set_expand(True)
         self.append_column(self.__desc_col)
 
         self.__prew_col_renderer = Gtk.CellRendererProgress()
         self.__prew_col = Gtk.TreeViewColumn(title="Pre Wait", cell_renderer=self.__prew_col_renderer, value=4, text=5)
         self.__prew_col.set_alignment(0.5)
+        self.__prew_col.set_sizing(Gtk.TreeViewColumnSizing.AUTOSIZE)
+        self.__prew_col.set_min_width(128)
+        self.__prew_col.set_expand(False)
         self.append_column(self.__prew_col)
 
         self.__duration_col_renderer = Gtk.CellRendererProgress()
         self.__duration_col = Gtk.TreeViewColumn(title="Action", cell_renderer=self.__duration_col_renderer, value=6,
                                                  text=7)
         self.__duration_col.set_alignment(0.5)
+        self.__duration_col.set_sizing(Gtk.TreeViewColumnSizing.AUTOSIZE)
+        self.__duration_col.set_min_width(128)
+        self.__duration_col.set_expand(False)
         self.append_column(self.__duration_col)
 
         self.__postw_col_renderer = Gtk.CellRendererProgress()
         self.__postw_col = Gtk.TreeViewColumn(title="Post Wait", cell_renderer=self.__postw_col_renderer, value=8,
                                               text=9)
         self.__postw_col.set_alignment(0.5)
+        self.__postw_col.set_min_width(128)
+        self.__postw_col.set_sizing(Gtk.TreeViewColumnSizing.AUTOSIZE)
+        self.__postw_col.set_expand(False)
         self.append_column(self.__postw_col)
+
+        self.set_grid_lines(Gtk.TreeViewGridLines.BOTH)
