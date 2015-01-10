@@ -62,7 +62,7 @@ class Cue(GObject.GObject):
         return self.duration()
 
     def go(self):
-        pass
+        print("GO recieved for [{0:g}]{1}".format(self.number, self.name))
 
     def pause(self):
         pass
@@ -109,6 +109,8 @@ class Cue(GObject.GObject):
         self.current_hash = key
         self.last_hash = j['previousRevision'] if 'previousRevision' in j else None
 
+        return self
+
     def store(self, root, d):
         """
         Stores the cue in the object repository. If you are creating a custom sub class, make sure you chain up to this
@@ -127,6 +129,7 @@ class Cue(GObject.GObject):
         d['preWait'] = self.pre_wait
         d['postWait'] = self.post_wait
         d['previousRevision'] = self.last_hash
+        d['type'] = 'unknown'
 
         self.current_hash, self.last_hash = write(root, d, self.current_hash)
 
@@ -194,6 +197,8 @@ class AudioCue(Cue):
         self.fade_in_time = int(j['fadeInTime']) if 'fadeInTime' in j else 0
         self.fade_out_time = int(j['fadeOutTime']) if 'fadeOutTime' in j else 0
 
+        return self
+
     def store(self, root, d):
         d['src'] = self.audio_source_uri
         d['pitch'] = self.pitch
@@ -201,6 +206,7 @@ class AudioCue(Cue):
         d['gain'] = self.gain
         d['fadeInTime'] = self.fade_in_time
         d['fadeOutTime'] = self.fade_out_time
+        d['type'] = 'audio'
 
         return super().store(root, d)
 GObject.type_register(AudioCue)
@@ -222,9 +228,10 @@ def load_cue(root, key):
     j = storage.read(root, key)
     if 'type' not in j:
         # TODO: Malformed Cue Exception: Cue does nto specify type error
-        return
+        return None
 
     t = j['type']
+    print("trying to load", key, "which is of type", t)
     if t is 'audio':
         return AudioCue().load(root, key, j)
     else:
@@ -243,12 +250,8 @@ class CueStack(GObject.GObject):
         self.current_hash = current_hash
         self.last_hash = last_hash
         # TODO: Once we're done debugging the layout, remote this default cue, the list should start empty
-        self.__cues = [Cue(description="This is a default cue. You should change it!", number=1,
-                           pre_wait=500),
-                       Cue(name="test", description="Another Cue", number=2,
-                           pre_wait=5200),
-                       Cue(name="Third!", description="And a third!", number=2,
-                           pre_wait=31260)] if cues is None else cues
+        self.__cues = [Cue(description="This is a default cue. You should change it!", number=x,
+                           pre_wait=500) for x in range(1, 60)] if cues is None else cues
         pass
 
     def __len__(self):
@@ -285,7 +288,9 @@ class CueStack(GObject.GObject):
         cues = []
         if 'cues' in j:
             for cue in j['cues']:
-                cues.append(load_cue(root, cue))
+                c = load_cue(root, cue)
+                print("Loaded", repr(c))
+                cues.append(c)
 
         return CueStack(name=name, cues=cues, current_hash=current_hash, last_hash=last_hash)
 

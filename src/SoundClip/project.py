@@ -35,6 +35,7 @@ class Project(GObject.GObject):
         self.cue_stacks = [CueStack(), ] if cue_stacks is None else cue_stacks
         self.current_hash = current_hash
         self.last_hash = last_hash
+        self.__dirty = True
 
     def close(self):
         # TODO: Stop all playing cues
@@ -72,6 +73,10 @@ class Project(GObject.GObject):
         if not self.root:
             # TODO: Project must have root before saving
             return
+
+        if not os.path.exists(self.root) or not os.path.isdir(self.root):
+            os.makedirs(self.root)
+
         d = {'name': self.name, 'creator': self.creator, 'stacks': []}
 
         for stack in self.cue_stacks:

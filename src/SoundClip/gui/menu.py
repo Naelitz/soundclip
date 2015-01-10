@@ -26,6 +26,11 @@ class SCHeaderBar(Gtk.HeaderBar):
 
         self.set_show_close_button(True)
 
+        self.__open_button = Gtk.Button.new_from_icon_name("document-open", Gtk.IconSize.SMALL_TOOLBAR)
+        self.__open_button.set_tooltip_text("Open Project")
+        self.__open_button.connect("clicked", self.on_open_project)
+        self.pack_start(self.__open_button)
+
         self.__new_project_button = Gtk.Button.new_from_icon_name("document-new", Gtk.IconSize.SMALL_TOOLBAR)
         self.__new_project_button.set_tooltip_text("New Project")
         self.__new_project_button.connect("clicked", self.on_new_project)
@@ -66,6 +71,9 @@ class SCHeaderBar(Gtk.HeaderBar):
         self.__panic_button.set_tooltip_text("PANIC: Stop all automations and cues")
         self.__panic_button.connect("clicked", self.on_panic)
         self.pack_end(self.__panic_button)
+
+    def on_open_project(self, button):
+        print("TODO: DO_OPEN_PROJECT")
 
     def on_new_project(self, button):
         print("TODO: DO_NEW_PROJECT")

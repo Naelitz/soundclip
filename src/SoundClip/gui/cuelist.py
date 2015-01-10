@@ -11,7 +11,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from gi.repository import Gtk
+from gi.repository import Gtk, Gdk
 from SoundClip import util
 from SoundClip.cue import PlaybackState
 
@@ -25,6 +25,9 @@ class SCCueListModel(Gtk.TreeStore):
     def __init__(self, cue_list):
         super().__init__()
         self.__cue_list = cue_list
+
+    def get_cue_at(self, itr):
+        return self.__cue_list[itr.user_data]
 
     def do_get_flags(self):
         return Gtk.TreeModelFlags.ITERS_PERSIST
@@ -117,7 +120,7 @@ class SCCueListModel(Gtk.TreeStore):
         return False, None
 
 
-class SCCueList(Gtk.TreeView):
+class SCCueList(Gtk.ScrolledWindow):
     """
     A graphical representation of a cue list
 
@@ -127,28 +130,31 @@ class SCCueList(Gtk.TreeView):
     def __init__(self, cue_list, **properties):
         super().__init__(**properties)
         self.__cue_list = cue_list
+        self.__tree_view = Gtk.TreeView()
+
+        self.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
 
         self.__model = SCCueListModel(self.__cue_list)
-        self.set_model(self.__model)
+        self.__tree_view.set_model(self.__model)
 
         self.__number_col_renderer = Gtk.CellRendererText()
         self.__number_col = Gtk.TreeViewColumn(title="#", cell_renderer=self.__number_col_renderer, text=3)
         self.__number_col.set_fixed_width(64)
         self.__number_col.set_alignment(0.5)
-        self.append_column(self.__number_col)
+        self.__tree_view.append_column(self.__number_col)
 
         self.__name_col_renderer = Gtk.CellRendererText()
         self.__name_col = Gtk.TreeViewColumn(title="Name", cell_renderer=self.__name_col_renderer, text=0)
         self.__name_col.set_alignment(0.5)
         self.__name_col.set_sizing(Gtk.TreeViewColumnSizing.AUTOSIZE)
         self.__name_col.set_expand(False)
-        self.append_column(self.__name_col)
+        self.__tree_view.append_column(self.__name_col)
 
         self.__desc_col_renderer = Gtk.CellRendererText()
         self.__desc_col = Gtk.TreeViewColumn(title="Description", cell_renderer=self.__desc_col_renderer, text=1)
         self.__desc_col.set_alignment(0.5)
         self.__desc_col.set_expand(True)
-        self.append_column(self.__desc_col)
+        self.__tree_view.append_column(self.__desc_col)
 
         self.__prew_col_renderer = Gtk.CellRendererProgress()
         self.__prew_col = Gtk.TreeViewColumn(title="Pre Wait", cell_renderer=self.__prew_col_renderer, value=4, text=5)
@@ -156,7 +162,7 @@ class SCCueList(Gtk.TreeView):
         self.__prew_col.set_sizing(Gtk.TreeViewColumnSizing.AUTOSIZE)
         self.__prew_col.set_min_width(128)
         self.__prew_col.set_expand(False)
-        self.append_column(self.__prew_col)
+        self.__tree_view.append_column(self.__prew_col)
 
         self.__duration_col_renderer = Gtk.CellRendererProgress()
         self.__duration_col = Gtk.TreeViewColumn(title="Action", cell_renderer=self.__duration_col_renderer, value=6,
@@ -165,7 +171,7 @@ class SCCueList(Gtk.TreeView):
         self.__duration_col.set_sizing(Gtk.TreeViewColumnSizing.AUTOSIZE)
         self.__duration_col.set_min_width(128)
         self.__duration_col.set_expand(False)
-        self.append_column(self.__duration_col)
+        self.__tree_view.append_column(self.__duration_col)
 
         self.__postw_col_renderer = Gtk.CellRendererProgress()
         self.__postw_col = Gtk.TreeViewColumn(title="Post Wait", cell_renderer=self.__postw_col_renderer, value=8,
@@ -174,6 +180,30 @@ class SCCueList(Gtk.TreeView):
         self.__postw_col.set_min_width(128)
         self.__postw_col.set_sizing(Gtk.TreeViewColumnSizing.AUTOSIZE)
         self.__postw_col.set_expand(False)
-        self.append_column(self.__postw_col)
+        self.__tree_view.append_column(self.__postw_col)
 
-        self.set_grid_lines(Gtk.TreeViewGridLines.BOTH)
+        self.__tree_view.set_grid_lines(Gtk.TreeViewGridLines.BOTH)
+        self.__tree_view.connect('key-press-event', self.on_key)
+
+        self.add(self.__tree_view)
+
+    def get_selected(self):
+        (model, pathlist) = self.__tree_view.get_selection().get_selected_rows()
+        tree_iter = model.get_iter(pathlist[0])
+        return self.__model.get_cue_at(tree_iter)
+
+    def select_previous(self):
+        (model, pathlist) = self.__tree_view.get_selection().get_selected_rows()
+        self.__tree_view.set_cursor(Gtk.TreePath(pathlist[0].get_indices()[0]-1), None, False)
+
+    def select_next(self):
+        (model, pathlist) = self.__tree_view.get_selection().get_selected_rows()
+        self.__tree_view.set_cursor(Gtk.TreePath(pathlist[0].get_indices()[0]+1), None, False)
+
+    def on_key(self, view, event):
+        if event.keyval is Gdk.KEY_space:
+            self.get_selected().go()
+            self.select_next()
+        else:
+            return False
+        return True

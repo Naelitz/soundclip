@@ -39,7 +39,7 @@ import os
 from SoundClip.util import sha
 
 
-def read(root, checksum):
+def read(root, key):
     """
     Reads an object from the database, returning its json content. Like git, objects are keyed by the sha1 hash of their
     content. The first two bytes of the hash refer to the sub directory of the objects store, the remaining 40 bytes
@@ -50,19 +50,20 @@ def read(root, checksum):
     :return: the json content of the specified object
     """
 
-    key = sha(checksum)
     path = os.path.join(root, '.soundclip', 'objects', key[0:2], key[2:40])
+    print("Asked to load", key, ", looking for", path)
     if not os.path.exists(path):
         raise FileNotFoundError("The specified object doesn't exist in the database!")
 
     with open(path, "rt") as dbobj:
-        content = dbobj.read()
+        content = dbobj.read().strip()
 
     if not content:
         # TODO: Illegal Object Exception: empty object!
         return
 
-    assert (sha(content) is checksum)
+    checksum = sha(content)
+    assert checksum == key
 
     return json.loads(content)
 
@@ -80,7 +81,7 @@ def write(root, d, current_hash):
 
     # TODO: Do we need to sort the dictionary so objects with no change always have the same hash?
 
-    s = json.dumps(d, sort_keys=True)
+    s = json.dumps(d, sort_keys=True).strip()
     print("JSON:", s)
     checksum = sha(s)
 
@@ -98,6 +99,7 @@ def write(root, d, current_hash):
     object_path = os.path.join(path, checksum[2:40])
     print("Writing", object_path)
     with open(object_path, "w") as f:
-        json.dump(d, f)
+        f.write(s)
+        f.write('\n')
 
     return checksum, current_hash

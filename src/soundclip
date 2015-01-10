@@ -20,6 +20,7 @@ from gi.repository import Gtk, Gst
 
 from SoundClip import __version__
 from SoundClip.gui import mainwindow
+from SoundClip.project import Project
 
 
 def get_gtk_version():
@@ -41,12 +42,15 @@ def main():
               "SoundClip is licensed under the terms of the GNU General Public License version 3.")
         sys.exit(0)
 
+    if args.project:
+        print("Trying to load project from", args.project)
+
     Gtk.init(sys.argv)
     Gst.init(sys.argv)
 
     Gtk.Settings.get_default().set_property('gtk-application-prefer-dark-theme', True)
 
-    main_window = mainwindow.SCMainWindow()
+    main_window = mainwindow.SCMainWindow(project=args.project)
     main_window.show_all()
 
     Gtk.main()
