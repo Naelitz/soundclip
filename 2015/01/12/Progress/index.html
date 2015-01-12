@@ -3,17 +3,18 @@
 <head>
   <meta charset="utf-8">
   
-  <title>Introducing SoundClip | SoundClip</title>
+  <title>Progress | SoundClip</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-  <meta name="description" content="I’ve been frustrated by the lack of good cue management software for theatrical productions. The only real players that I know of are QLab and Multiplay. With QLab, you have to have a mac (which I nei">
+  <meta name="description" content="I’ve made some progress on the cue list and editor today.">
 <meta property="og:type" content="article">
-<meta property="og:title" content="Introducing SoundClip">
-<meta property="og:url" content="https://techwiz24.github.io/soundclip/soundclip/2015/01/01/Introducing-SoundClip/">
+<meta property="og:title" content="Progress">
+<meta property="og:url" content="https://techwiz24.github.io/soundclip/soundclip/2015/01/12/Progress/">
 <meta property="og:site_name" content="SoundClip">
-<meta property="og:description" content="I’ve been frustrated by the lack of good cue management software for theatrical productions. The only real players that I know of are QLab and Multiplay. With QLab, you have to have a mac (which I nei">
+<meta property="og:description" content="I’ve made some progress on the cue list and editor today.">
+<meta property="og:image" content="gui.png">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="Introducing SoundClip">
-<meta name="twitter:description" content="I’ve been frustrated by the lack of good cue management software for theatrical productions. The only real players that I know of are QLab and Multiplay. With QLab, you have to have a mac (which I nei">
+<meta name="twitter:title" content="Progress">
+<meta name="twitter:description" content="I’ve made some progress on the cue list and editor today.">
 
   
     <link rel="alternative" href="/atom.xml" title="SoundClip" type="application/atom+xml">
@@ -65,10 +66,10 @@
   </div>
 </header>
       <div class="outer">
-        <section id="main"><article id="post-Introducing-SoundClip" class="article article-type-post" itemscope itemprop="blogPost">
+        <section id="main"><article id="post-Progress" class="article article-type-post" itemscope itemprop="blogPost">
   <div class="article-meta">
-    <a href="/soundclip/2015/01/01/Introducing-SoundClip/" class="article-date">
-  <time datetime="2015-01-02T02:35:14.000Z" itemprop="datePublished">Jan 1 2015</time>
+    <a href="/soundclip/2015/01/12/Progress/" class="article-date">
+  <time datetime="2015-01-12T16:32:08.000Z" itemprop="datePublished">Jan 12 2015</time>
 </a>
     
   </div>
@@ -79,7 +80,7 @@
         
   
     <h1 class="article-title" itemprop="name">
-      Introducing SoundClip
+      Progress
     </h1>
   
 
@@ -87,16 +88,17 @@
     
     <div class="article-entry" itemprop="articleBody">
       
-        <p>I’ve been frustrated by the lack of good cue management software for theatrical productions. The only real players that I know of are <a href="http://figure53.com/qlab/" target="_blank" rel="external">QLab</a> and <a href="http://www.da-share.com/software/multiplay/" target="_blank" rel="external">Multiplay</a>. With QLab, you have to have a mac (which I neither have nor want), which can be an expensive investment for a small school or community theater. Multiplay works well enough on windows, but doesn’t feel polished, and can’t play any audio under <code>WINE</code>.</p>
+        <p>I’ve made some progress on the cue list and editor today.</p>
 <a id="more"></a>
 
-<p>That is why I’m starting a new project. Introducing <code>SoundClip</code>, an Open Source audio cue playback system written in <code>python3</code>, using <code>GTK+3</code> and <code>gstreamer</code>. I hope to have an initial working verson done in time for a production I will be working on in the spring, but after that, I’d really like to flesh out the project more. Currently, I’m finishing up the project file format and the interface.</p>
-<p>Over the next few days, I’ll add some goals and planned features, but it’s late, and I have to go to work tomorrow.</p>
+<p>The Cue Editor is modular. Each Cue Type provides its own editor window. Right now, only the base class editor is implemented:</p>
+<p><img src="gui.png" alt=""></p>
+<p>I also fixed some resizing issues and projects now load correctly. Progress!</p>
 
       
     </div>
     <footer class="article-footer">
-      <a data-url="https://techwiz24.github.io/soundclip/2015/01/01/Introducing-SoundClip/" data-id="jgfnupks5355rp6x" class="article-share-link">Share</a>
+      <a data-url="https://techwiz24.github.io/soundclip/2015/01/12/Progress/" data-id="p5dfcdpfpg4ghmyi" class="article-share-link">Share</a>
       
       
     </footer>
@@ -105,15 +107,11 @@
     
 <nav id="article-nav">
   
-    <a href="/soundclip/2015/01/02/Lets-Talk-Roadmaps/" id="article-nav-newer" class="article-nav-link-wrap">
-      <strong class="article-nav-caption">Newer</strong>
-      <div class="article-nav-title">
-        
-          Lets Talk Roadmaps
-        
-      </div>
-    </a>
   
+    <a href="/soundclip/2015/01/06/Looking-Better/" id="article-nav-older" class="article-nav-link-wrap">
+      <strong class="article-nav-caption">Older</strong>
+      <div class="article-nav-title">Looking Better</div>
+    </a>
   
 </nav>
 
