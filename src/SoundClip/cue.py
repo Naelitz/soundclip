@@ -59,16 +59,16 @@ class Cue(GObject.GObject):
         self.post_wait = post_wait
 
     def __len__(self):
-        return self.duration()
+        return self.duration
 
     def go(self):
-        print("GO recieved for [{0:g}]{1}".format(self.number, self.name))
+        print("GO received for [{0:g}]{1}".format(self.number, self.name))
 
     def pause(self):
-        pass
+        print("PAUSE received for [{0:g}]{1}".format(self.number, self.name))
 
     def stop(self):
-        pass
+        print("STOP received for [{0:g}]{1}".format(self.number, self.name))
 
     @GObject.property
     def duration(self):
@@ -148,8 +148,8 @@ class Cue(GObject.GObject):
 
     def on_editor_closed(self, w):
         """
-        Called when the cue editor is closed, and returns the widget passed in `get_editor`. If you are implementing
-        a custom cue, you should pull the property values from the widget here and apply them to the cue.
+        Called when the cue editor is being closed, and returns the widget passed in `get_editor`. If you are
+        implementing a custom cue, you should pull the property values from the widget here and apply them to the cue.
 
         Properties handled by the `Cue` base class do not need to be accounted for, they are handled by SoundClip
         directly
@@ -239,7 +239,17 @@ def load_cue(root, key):
         return Cue().load(root, key, j)
 
 
+class CueStackChangeType(Enum):
+    INSERT = 0
+    UPDATE = 1
+    DELETE = 2
+
+
 class CueStack(GObject.GObject):
+    __gsignals__ = {
+        'changed': (GObject.SIGNAL_RUN_FIRST, None, (int, GObject.TYPE_PYOBJECT))
+    }
+
     name = GObject.property(type=str)
     current_hash = GObject.property(type=str)
     last_hash = GObject.property(type=str)
@@ -249,10 +259,8 @@ class CueStack(GObject.GObject):
         self.name = name
         self.current_hash = current_hash
         self.last_hash = last_hash
-        # TODO: Once we're done debugging the layout, remote this default cue, the list should start empty
-        self.__cues = [Cue(description="This is a default cue. You should change it!", number=x,
-                           pre_wait=500) for x in range(1, 60)] if cues is None else cues
-        pass
+
+        self.__cues = [] if cues is None else cues
 
     def __len__(self):
         return len(self.__cues)
@@ -261,7 +269,10 @@ class CueStack(GObject.GObject):
         return self.__cues[key]
 
     def __setitem__(self, key, value):
+        l = len(self.__cues)
         self.__cues[key] = value
+
+        self.emit('changed', key, CueStackChangeType.UPDATE if 0 <= key < l else CueStackChangeType.INSERT)
 
     def __iter__(self):
         return self.__cues.__iter__()
@@ -274,9 +285,21 @@ class CueStack(GObject.GObject):
 
     def __iadd__(self, other):
         self.__cues.append(other)
+        self.emit('changed', len(self.__cues)-1, CueStackChangeType.INSERT)
+        return self
 
     def __isub__(self, other):
+        i = self.__cues.index(other)
         self.__cues.remove(other)
+        self.emit('changed', i, CueStackChangeType.DELETE)
+        return self
+
+    def index(self, obj):
+        return self.__cues.index(obj)
+
+    def add_cue_relative_to(self, existing, cue):
+        self.__cues.insert(self.index(existing)+1, cue)
+        self.emit('changed', self.index(existing)+1, CueStackChangeType.DELETE)
 
     @staticmethod
     def load(root, key):

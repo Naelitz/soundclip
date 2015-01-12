@@ -67,3 +67,13 @@ class SCMainWindow(Gtk.Window):
 
     def toggle_workspace_lock(self, button):
         print("TODO: TOGGLE_LOCK_WORKSPACE")
+
+    def get_selected_cue(self):
+        return self.__cue_lists.get_selected_cue()
+
+    def add_cue_relative_to(self, existing, cue):
+        stack = self.__cue_lists.get_current_stack()
+        if existing:
+            stack.add_cue_relative_to(existing, cue)
+        else:
+            stack += cue

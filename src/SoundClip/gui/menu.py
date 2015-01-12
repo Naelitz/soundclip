@@ -12,6 +12,8 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from gi.repository import Gtk, Gio
+from SoundClip.cue import Cue
+from SoundClip.gui.dialog import SCCueDialog
 
 
 class SCHeaderBar(Gtk.HeaderBar):
@@ -101,8 +103,18 @@ class SCHeaderBar(Gtk.HeaderBar):
         self.__main_window.update_title()
 
     def on_add_cue(self, button):
-        print("TODO: DO_ADD_CUE")
-        # dialog = CueDialog(self.__main_window)
+        current = self.__main_window.get_selected_cue()
+        c = Cue()
+        c.number = current.number + 1 if current else 1
+
+        dialog = SCCueDialog(self.__main_window, c)
+        result = dialog.run()
+        dialog.destroy()
+
+        if result == Gtk.ResponseType.OK:
+            self.__main_window.add_cue_relative_to(current, c)
+        else:
+            pass
 
     def on_panic(self, button):
         """
@@ -130,5 +142,8 @@ class SCPopoverMenu(Gtk.Popover):
         self.bind_model(self.__model)
 
         self.__about_action = Gio.SimpleAction.new('about-action', None)
-        self.__about_action.connect("activate", lambda obj, btn: print("Foo!"))
+        self.__about_action.connect("activate", self.on_about)
         self.__model.append("About", "app.about-action")
+
+    def on_about(self, button):
+        print("ABOUT!")

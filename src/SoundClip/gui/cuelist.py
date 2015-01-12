@@ -11,13 +11,15 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from gi.repository import Gtk, Gdk
+from gi.repository import Gtk, Gdk, cairo
 from SoundClip import util
-from SoundClip.cue import PlaybackState
+from SoundClip.cue import PlaybackState, CueStackChangeType
+from SoundClip.gui.dialog import SCCueDialog
 
 
 class SCCueListModel(Gtk.TreeStore):
     """
+    The model for the cue list
     """
 
     column_types = (str, str, str, str, float, str, float, str, float, str)
@@ -25,9 +27,18 @@ class SCCueListModel(Gtk.TreeStore):
     def __init__(self, cue_list):
         super().__init__()
         self.__cue_list = cue_list
+        self.__cue_list.connect('changed', self.on_cuelist_changed)
 
-    def get_cue_at(self, itr):
-        return self.__cue_list[itr.user_data]
+    def on_cuelist_changed(self, obj, index, csct):
+        if csct == CueStackChangeType.INSERT:
+            self.row_inserted(Gtk.TreePath.new_from_indices((index,)), Gtk.TreeIter())
+        elif csct == CueStackChangeType.UPDATE:
+            self.row_changed(Gtk.TreePath.new_from_indices((index,)), Gtk.TreeIter())
+        elif csct == CueStackChangeType.DELETE:
+            self.row_deleted(Gtk.TreePath.new_from_indices((index,)))
+
+    def get_cue_at(self, path):
+        return self.__cue_list[path.get_indices()[0]]
 
     def do_get_flags(self):
         return Gtk.TreeModelFlags.ITERS_PERSIST
@@ -79,6 +90,12 @@ class SCCueListModel(Gtk.TreeStore):
             9: self.__elapsed_post(self.__cue_list[itr.user_data]),
         }.get(column, None)
 
+    def do_set_value(self, itr, column):
+        """
+        Model should be read-only. May be revisited in the future
+        """
+        pass
+
     def do_iter_next(self, itr):
         next_index = itr.user_data + 1
         if next_index >= len(self.__cue_list):
@@ -120,6 +137,43 @@ class SCCueListModel(Gtk.TreeStore):
         return False, None
 
 
+class SCCueListMenu(Gtk.Popover):
+    """
+    The context menu displayed when a cue is right-clicked
+    """
+
+    def __init__(self, view, **properties):
+        super().__init__(**properties)
+        self.__tree_view = view
+        self.set_relative_to(self.__tree_view)
+        self.__focused_cue = None
+
+        self.__box = Gtk.Box()
+
+    def popover_cue(self, cue, x, y):
+        r = cairo.RectangleInt()
+        r.x = x
+        r.y = y + 25
+        r.width = 0
+        r.height = 0
+        self.set_pointing_to(r)
+        self.set_position(Gtk.PositionType.BOTTOM)
+        self.__focused_cue = cue
+
+        self.remove(self.__box)
+        self.__box = Gtk.Box()
+        if self.__focused_cue.state is PlaybackState.PAUSED or self.__focused_cue.state is PlaybackState.PLAYING:
+            pass
+        else:
+            pass
+
+        print("Popping over [{0:g}]{1}".format(self.__focused_cue.number, self.__focused_cue.name))
+        self.show_all()
+
+    def on_edit(self):
+        print("TODO: Edit cue [{0:g}]{1}".format(self.__focused_cue.number, self.__focused_cue.name))
+
+
 class SCCueList(Gtk.ScrolledWindow):
     """
     A graphical representation of a cue list
@@ -127,10 +181,12 @@ class SCCueList(Gtk.ScrolledWindow):
     TODO: How do I get the bloody columns to size properly?
     """
 
-    def __init__(self, cue_list, **properties):
+    def __init__(self, w, cue_list, **properties):
         super().__init__(**properties)
+        self.__main_window = w
         self.__cue_list = cue_list
         self.__tree_view = Gtk.TreeView()
+        self.__popover = SCCueListMenu(self.__tree_view)
 
         self.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
 
@@ -183,14 +239,18 @@ class SCCueList(Gtk.ScrolledWindow):
         self.__tree_view.append_column(self.__postw_col)
 
         self.__tree_view.set_grid_lines(Gtk.TreeViewGridLines.BOTH)
-        self.__tree_view.connect('key-press-event', self.on_key)
+        self.__tree_view.connect('key-release-event', self.on_key)
+        self.__tree_view.connect('button-press-event', self.on_click)
 
         self.add(self.__tree_view)
 
     def get_selected(self):
+        if len(self.__cue_list) <= 0:
+            return None
         (model, pathlist) = self.__tree_view.get_selection().get_selected_rows()
-        tree_iter = model.get_iter(pathlist[0])
-        return self.__model.get_cue_at(tree_iter)
+        if not pathlist:
+            return None
+        return self.__model.get_cue_at(pathlist[0])
 
     def select_previous(self):
         (model, pathlist) = self.__tree_view.get_selection().get_selected_rows()
@@ -200,10 +260,23 @@ class SCCueList(Gtk.ScrolledWindow):
         (model, pathlist) = self.__tree_view.get_selection().get_selected_rows()
         self.__tree_view.set_cursor(Gtk.TreePath(pathlist[0].get_indices()[0]+1), None, False)
 
+    def on_click(self, view, event):
+        x, y = int(event.x), int(event.y)
+        path = self.__tree_view.get_path_at_pos(x, y)
+        cue = self.__cue_list[path[0].get_indices()[0]]
+        if event.button is Gdk.BUTTON_SECONDARY:
+            self.__popover.popover_cue(cue, x, y)
+        elif event.button is Gdk.BUTTON_PRIMARY and event.type == Gdk.EventType.DOUBLE_BUTTON_PRESS:
+            dialog = SCCueDialog(self.__main_window, cue)
+            dialog.run()
+            dialog.destroy()
+
     def on_key(self, view, event):
         if event.keyval is Gdk.KEY_space:
             self.get_selected().go()
             self.select_next()
-        else:
             return False
         return True
+
+    def get_stack(self):
+        return self.__cue_list
