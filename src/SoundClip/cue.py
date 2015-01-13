@@ -10,6 +10,7 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
 import os
 
 from enum import Enum
@@ -146,7 +147,7 @@ class Cue(GObject.GObject):
         """
         pass
 
-    def on_editor_closed(self, w):
+    def on_editor_closed(self, w, save=True):
         """
         Called when the cue editor is being closed, and returns the widget passed in `get_editor`. If you are
         implementing a custom cue, you should pull the property values from the widget here and apply them to the cue.

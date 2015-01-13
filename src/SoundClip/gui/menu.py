@@ -10,11 +10,14 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
 import os
 
 from gi.repository import Gtk, Gio
+import SoundClip
+
 from SoundClip.cue import Cue
-from SoundClip.gui.dialog import SCCueDialog
+from SoundClip.gui.dialog import SCCueDialog, SCProjectPropertiesDialog
 from SoundClip.project import Project
 
 
@@ -47,19 +50,22 @@ class SCHeaderBar(Gtk.HeaderBar):
 
         self.pack_start(Gtk.Separator(orientation=Gtk.Orientation.VERTICAL))
 
-        self.__add_cue_button = Gtk.Button.new_from_icon_name("list-add", Gtk.IconSize.SMALL_TOOLBAR)
-        self.__add_cue_button.set_tooltip_text("Add Cue Here")
-        self.__add_cue_button.connect("clicked", self.on_add_cue)
+        self.__add_cue_button = Gtk.MenuButton()
+        self.__add_cue_button.add(Gtk.Image.new_from_icon_name("list-add", Gtk.IconSize.SMALL_TOOLBAR))
+        self.__add_cue_model = SCAddCuemenu(self.__main_window)
+        self.__add_cue_button.set_menu_model(self.__add_cue_model)
+        self.__add_cue_button.insert_action_group('cue', self.__add_cue_model.get_action_group())
+        self.__add_cue_button.set_tooltip_text("Add...")
         self.pack_start(self.__add_cue_button)
 
         # When packing at the end, items must be specified rightmost first, working your way back towards the middle
-
-        self.__settings_button = Gtk.Button.new_from_icon_name("open-menu-symbolic", Gtk.IconSize.SMALL_TOOLBAR)
-        self.__settings_button.connect("clicked", self.on_settings)
+        self.__settings_button = Gtk.MenuButton()
+        self.__settings_button.add(Gtk.Image.new_from_icon_name("open-menu-symbolic", Gtk.IconSize.SMALL_TOOLBAR))
+        self.__settings_model = SCSettingsMenuModel(self.__main_window)
+        self.__settings_button.set_menu_model(self.__settings_model)
+        self.__settings_button.insert_action_group('hb', self.__settings_model.get_action_group())
+        self.__settings_button.set_tooltip_text("Properties")
         self.pack_end(self.__settings_button)
-
-        self.__settings_menu = SCPopoverMenu()
-        self.__settings_menu.set_relative_to(self.__settings_button)
 
         self.__lock_workspace_button = Gtk.ToggleButton()
         self.__lock_workspace_button.set_image(Gtk.Image.new_from_icon_name("system-lock-screen",
@@ -140,12 +146,93 @@ class SCHeaderBar(Gtk.HeaderBar):
         self.__main_window.project.store()
         self.__main_window.update_title()
 
-    def on_add_cue(self, button):
+    def on_panic(self, button):
+        """
+        Callback for the Panic Button. Stops all running cues and automation tasks
+        """
+        print("PANIC! Stopping all cues and automation")
+        self.__main_window.send_stop_all()
+
+
+class SCSettingsMenuModel(Gio.Menu):
+    """
+    The menu displayed when the menu button is clicked
+    """
+
+    def __init__(self, w, **properties):
+        super().__init__(**properties)
+
+        self.__main_window = w
+
+        self.__action_group = Gio.SimpleActionGroup()
+
+        properties_action = Gio.SimpleAction.new("properties", None)
+        properties_action.connect("activate", self.on_properties)
+        self.append("Project Properties", "hb.properties")
+        self.__action_group.insert(properties_action)
+
+        about_action = Gio.SimpleAction.new("about", None)
+        about_action.connect("activate", self.on_about)
+        self.append("About", "hb.about")
+        self.__action_group.insert(about_action)
+
+    def on_about(self, model, user_data):
+        d = Gtk.AboutDialog.new()
+        d.set_transient_for(self.__main_window)
+        d.set_modal(True)
+        d.set_program_name("SoundClip")
+        d.set_title("About SoundClip")
+        d.set_version("Version {0}".format(SoundClip.__version__))
+        d.set_license_type(Gtk.License.GPL_3_0)
+        d.set_copyright("Copyright \xa9 2014-2015 Nathan Lowe")
+        d.set_website("https://github.com/techwiz24/soundclip")
+        d.set_website_label("https://github.com/techwiz24/soundclip")
+        d.run()
+        d.destroy()
+
+    def on_properties(self, model, user_data):
+        d = SCProjectPropertiesDialog(self.__main_window)
+        d.run()
+        d.destroy()
+
+    def get_action_group(self):
+        return self.__action_group
+
+
+class SCAddCuemenu(Gio.Menu):
+    def __init__(self, w, **properties):
+        super().__init__(**properties)
+
+        self.__main_window = w
+        self.__action_group = Gio.SimpleActionGroup()
+        
+        blank_cue = Gio.SimpleAction.new("blank", None)
+        blank_cue.connect('activate', self.on_blank_cue)
+        self.append("Blank Cue", "cue.blank")
+        self.__action_group.insert(blank_cue)
+        
+        audio_cue = Gio.SimpleAction.new("audio", None)
+        audio_cue.connect('activate', self.on_audio_cue)
+        self.append("Audio Cue", "cue.audio")
+        self.__action_group.insert(audio_cue)
+        
+        cue_list = Gio.SimpleAction.new("list", None)
+        cue_list.connect('activate', self.on_cue_list)
+        self.append("Cue List", "cue.list")
+        self.__action_group.insert(cue_list)
+
+    def on_blank_cue(self, model, user_data):
         current = self.__main_window.get_selected_cue()
         print("Current cue is {0}".format(current.name if current else "None"))
         c = Cue()
         c.number = current.number + 1 if current else 1
 
+        self.display_add_dialog_for(current, c)
+    
+    def on_audio_cue(self, model, user_data):
+        print("TODO: Add Audio Cue")
+
+    def display_add_dialog_for(self, current, c):
         dialog = SCCueDialog(self.__main_window, c)
         result = dialog.run()
         dialog.destroy()
@@ -154,35 +241,9 @@ class SCHeaderBar(Gtk.HeaderBar):
             self.__main_window.add_cue_relative_to(current, c)
         else:
             pass
+    
+    def on_cue_list(self, model, user_data):
+        print("TODO: Add Cue List")
 
-    def on_panic(self, button):
-        """
-        Callback for the Panic Button. Stops all running cues and automation tasks
-        """
-        print("PANIC! Stopping all cues and automation")
-        self.__main_window.send_stop_all()
-
-    def on_settings(self, button):
-        if self.__settings_menu.get_visible():
-            self.__settings_menu.hide()
-        else:
-            self.__settings_menu.show_all()
-
-
-class SCPopoverMenu(Gtk.Popover):
-    """
-    The menu displayed when the menu button is clicked
-    """
-
-    def __init__(self, **properties):
-        super().__init__(**properties)
-
-        self.__model = Gio.Menu()
-        self.bind_model(self.__model)
-
-        self.__about_action = Gio.SimpleAction.new('about-action', None)
-        self.__about_action.connect("activate", self.on_about)
-        self.__model.append("About", "app.about-action")
-
-    def on_about(self, button):
-        print("ABOUT!")
+    def get_action_group(self):
+        return self.__action_group

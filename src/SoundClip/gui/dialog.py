@@ -10,7 +10,79 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
 from gi.repository import Gtk, Gdk
+
+
+class SCProjectPropertiesDialog(Gtk.Dialog):
+    def __init__(self, w, **properties):
+        super().__init__("Project Properties - {0}".format(w.project.name), w, 0,
+                         (Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL, Gtk.STOCK_OK, Gtk.ResponseType.OK), **properties)
+
+        self.__main_window = w
+        grid = Gtk.Grid()
+
+        stats_label = Gtk.Label("{0:g} cues in {1:g} lists".format(
+            sum([len(stack) for stack in self.__main_window.project.cue_stacks]),
+            len(self.__main_window.project.cue_stacks))
+        )
+        stats_label.set_halign(Gtk.Align.CENTER)
+        grid.attach(stats_label, 0, 0, 3, 1)
+
+        name_label = Gtk.Label("Name")
+        name_label.set_halign(Gtk.Align.END)
+        grid.attach(name_label, 0, 1, 1, 1)
+        self.__name = Gtk.Entry()
+        self.__name.set_text(self.__main_window.project.name)
+        self.__name.set_hexpand(True)
+        self.__name.set_halign(Gtk.Align.FILL)
+        grid.attach(self.__name, 1, 1, 2, 1)
+
+        creator_label = Gtk.Label("Creator")
+        creator_label.set_halign(Gtk.Align.END)
+        grid.attach(creator_label, 0, 2, 1, 1)
+        self.__creator = Gtk.Entry()
+        self.__creator.set_text(self.__main_window.project.creator)
+        self.__creator.set_hexpand(True)
+        self.__creator.set_halign(Gtk.Align.FILL)
+        grid.attach(self.__creator, 1, 2, 2, 1)
+
+        root_label = Gtk.Label("Project Root")
+        root_label.set_halign(Gtk.Align.END)
+        grid.attach(root_label, 0, 3, 1, 1)
+        self.__root = Gtk.Entry()
+        self.__root.set_text(self.__main_window.project.root)
+        self.__root.set_hexpand(True)
+        self.__root.set_halign(Gtk.Align.FILL)
+        grid.attach(self.__root, 1, 3, 1, 1)
+        root_button = Gtk.Button.new_with_label("...")
+        root_button.connect('clicked', self.on_root_button)
+        grid.attach(root_button, 2, 3, 1, 1)
+
+        # TODO: Previous Revisions
+
+        self.get_content_area().pack_start(grid, True, True, 0)
+        self.set_modal(True)
+        w, h = self.__main_window.get_size()
+        g = Gdk.Geometry()
+        g.min_width = int(float(w) * .7)
+        g.max_width = int(float(w) * .7)
+        g.max_height = int(float(h) * .7)
+        self.set_geometry_hints(None, g, Gdk.WindowHints.MIN_SIZE | Gdk.WindowHints.MAX_SIZE)
+        self.connect('response', self.on_response)
+        self.show_all()
+
+    def on_root_button(self, button):
+        print("TODO: Project Root File Chooser")
+
+    def on_response(self, w, response):
+        if response == Gtk.ResponseType.OK:
+            self.__main_window.project.name = self.__name.get_text()
+            self.__main_window.project.creator = self.__creator.get_text()
+            if self.__main_window.project.root != self.__root.get_text():
+                self.__main_window.project.root = self.__root.get_text()
+                self.__main_window.project.store()
+            self.__main_window.update_title()
 
 
 class SCCueDialog(Gtk.Dialog):
@@ -96,8 +168,8 @@ class SCCueDialog(Gtk.Dialog):
     def get_cue(self):
         return self.__cue
 
-    def on_response(self, w, id):
-        if id == Gtk.ResponseType.OK:
+    def on_response(self, w, response):
+        if response == Gtk.ResponseType.OK:
             self.__cue.name = self.__name.get_text().strip()
             self.__cue.description = self.__description.get_text().strip()
             self.__cue.notes = self.__notes.get_text().strip()
@@ -105,3 +177,5 @@ class SCCueDialog(Gtk.Dialog):
             self.__cue.post_wait = float(self.__postwait.get_text())
 
             self.__cue.on_editor_closed(self.__editor)
+        else:
+            self.__cue.on_editor_closed(self.__editor, save=False)

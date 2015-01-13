@@ -12,6 +12,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from gi.repository import Gtk, Gdk, cairo
+
 from SoundClip import util
 from SoundClip.cue import PlaybackState, CueStackChangeType
 from SoundClip.gui.dialog import SCCueDialog

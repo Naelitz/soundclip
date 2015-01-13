@@ -12,6 +12,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from gi.repository import Gtk
+
 from SoundClip import __version__
 from SoundClip.gui.containers import SCCueListContainer
 from SoundClip.gui.menu import SCHeaderBar

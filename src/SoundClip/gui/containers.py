@@ -12,6 +12,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from gi.repository import Gtk
+
 from SoundClip.gui.cuelist import SCCueList
 
 
