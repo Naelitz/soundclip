@@ -10,10 +10,12 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
+import os
 
 from gi.repository import Gtk, Gio
 from SoundClip.cue import Cue
 from SoundClip.gui.dialog import SCCueDialog
+from SoundClip.project import Project
 
 
 class SCHeaderBar(Gtk.HeaderBar):
@@ -75,10 +77,46 @@ class SCHeaderBar(Gtk.HeaderBar):
         self.pack_end(self.__panic_button)
 
     def on_open_project(self, button):
-        print("TODO: DO_OPEN_PROJECT")
+        # TODO: Save existing project if needed
+        dialog = Gtk.FileChooserDialog("Please choose a folder", self.__main_window,
+                                       Gtk.FileChooserAction.SELECT_FOLDER,
+                                       (Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL, "Select", Gtk.ResponseType.OK))
+        dialog.set_default_size(800, 400)
+
+        result = dialog.run()
+        if result == Gtk.ResponseType.OK:
+            proj = dialog.get_filename()
+            print("Opening from", proj)
+            p = Project.load(proj)
+            if p:
+                self.__main_window.change_project(p)
+        elif result == Gtk.ResponseType.CANCEL:
+            print("CANCEL")
+        dialog.destroy()
 
     def on_new_project(self, button):
-        print("TODO: DO_NEW_PROJECT")
+        # TODO: Save existing project if needed
+        dialog = Gtk.FileChooserDialog("Please choose a folder", self.__main_window,
+                                       Gtk.FileChooserAction.SELECT_FOLDER,
+                                       (Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL, "Select", Gtk.ResponseType.OK))
+        dialog.set_default_size(800, 400)
+
+        result = dialog.run()
+        if result == Gtk.ResponseType.OK:
+            proj = dialog.get_filename()
+            if os.path.isdir(os.path.join(proj, ".soundclip")):
+                print("Project exists!")
+                # TODO: Error, project exists
+                pass
+            else:
+                print("Saving new project to", proj)
+                p = Project()
+                p.root = proj
+                self.__main_window.change_project(p)
+                # TODO: Project Properties window?
+        elif result == Gtk.ResponseType.CANCEL:
+            print("CANCEL")
+        dialog.destroy()
 
     def on_save_as(self, button):
         root = self.__main_window.project.root
@@ -104,6 +142,7 @@ class SCHeaderBar(Gtk.HeaderBar):
 
     def on_add_cue(self, button):
         current = self.__main_window.get_selected_cue()
+        print("Current cue is {0}".format(current.name if current else "None"))
         c = Cue()
         c.number = current.number + 1 if current else 1
 

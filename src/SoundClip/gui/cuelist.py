@@ -250,6 +250,7 @@ class SCCueList(Gtk.ScrolledWindow):
         (model, pathlist) = self.__tree_view.get_selection().get_selected_rows()
         if not pathlist:
             return None
+        print("Getting Cue")
         return self.__model.get_cue_at(pathlist[0])
 
     def select_previous(self):

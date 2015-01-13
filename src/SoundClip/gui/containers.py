@@ -29,9 +29,12 @@ class SCCueListContainer(Gtk.Notebook):
         self.set_valign(Gtk.Align.FILL)
 
     def on_project_changed(self, p):
+        for i in range(0, self.get_n_pages()):
+            self.remove_page(-1)
         for stack in p.cue_stacks:
             self.append_page(SCCueList(self.__main_window, stack), Gtk.Label(stack.name))
         self.set_show_tabs(True if self.get_n_pages() > 1 else False)
+        self.show_all()
 
     def get_selected_cue(self):
         self.get_nth_page(self.get_current_page()).get_selected()

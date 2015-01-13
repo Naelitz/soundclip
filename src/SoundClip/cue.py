@@ -67,7 +67,7 @@ class Cue(GObject.GObject):
     def pause(self):
         print("PAUSE received for [{0:g}]{1}".format(self.number, self.name))
 
-    def stop(self):
+    def stop(self, fade=0):
         print("STOP received for [{0:g}]{1}".format(self.number, self.name))
 
     @GObject.property
