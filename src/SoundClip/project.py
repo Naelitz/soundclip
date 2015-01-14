@@ -13,11 +13,22 @@
 
 import json
 import os
+import logging
+logger = logging.getLogger('SoundClip')
 
 from gi.repository import GObject
 
 from SoundClip.cue import CueStack
+from SoundClip.exception import SCException
 from SoundClip.util import sha
+
+
+class ProjectParserException(SCException):
+    pass
+
+
+class IllegalProjectStateException(SCException):
+    pass
 
 
 class Project(GObject.GObject):
@@ -41,7 +52,6 @@ class Project(GObject.GObject):
     def close(self):
         # TODO: Stop all playing cues
         # TODO: Save project to disk if new
-        # TODO: Commit and close DB connection
         pass
 
     @staticmethod
@@ -53,8 +63,10 @@ class Project(GObject.GObject):
             content = dbobj.read()
 
         if not content:
-            # TODO: Corrupted Project: project.json is empty
-            return
+            raise ProjectParserException({
+                "message": "The project is corrupted (project.json was empty)!",
+                "path": path
+            })
 
         j = json.loads(content)
 
@@ -72,8 +84,9 @@ class Project(GObject.GObject):
 
     def store(self):
         if not self.root:
-            # TODO: Project must have root before saving
-            return
+            raise IllegalProjectStateException({
+                "message": "Projects must have a root before they can be saved"
+            })
 
         if not os.path.exists(self.root) or not os.path.isdir(self.root):
             os.makedirs(self.root)
@@ -85,5 +98,6 @@ class Project(GObject.GObject):
 
         with open(os.path.join(self.root, '.soundclip', 'project.json'), 'w') as f:
             json.dump(d, f)
+            f.write("\n")
 
-        print("Project", self.name, "saved to", self.root)
+        logger.info("Project {0} saved to {1}".format(self.name, self.root))

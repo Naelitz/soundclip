@@ -11,6 +11,9 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+import logging
+logger = logging.getLogger('SoundClip')
+
 from gi.repository import Gtk, Gdk, cairo
 
 from SoundClip import util
@@ -168,11 +171,11 @@ class SCCueListMenu(Gtk.Popover):
         else:
             pass
 
-        print("Popping over [{0:g}]{1}".format(self.__focused_cue.number, self.__focused_cue.name))
+        logger.debug("Popping over [{0:g}]{1}".format(self.__focused_cue.number, self.__focused_cue.name))
         self.show_all()
 
     def on_edit(self):
-        print("TODO: Edit cue [{0:g}]{1}".format(self.__focused_cue.number, self.__focused_cue.name))
+        logger.debug("TODO: Edit cue [{0:g}]{1}".format(self.__focused_cue.number, self.__focused_cue.name))
 
 
 class SCCueList(Gtk.ScrolledWindow):
@@ -251,7 +254,7 @@ class SCCueList(Gtk.ScrolledWindow):
         (model, pathlist) = self.__tree_view.get_selection().get_selected_rows()
         if not pathlist:
             return None
-        print("Getting Cue")
+        logger.debug("Getting Cue")
         return self.__model.get_cue_at(pathlist[0])
 
     def select_previous(self):

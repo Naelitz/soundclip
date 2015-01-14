@@ -35,8 +35,23 @@ previous revisions
 
 import json
 import os
+import logging
+logger = logging.getLogger('SoundClip')
 
+from SoundClip.exception import SCException
 from SoundClip.util import sha
+
+
+class StorageException(SCException):
+    pass
+
+
+class ChecksumMismatchException(StorageException):
+    pass
+
+
+class IllegalObjectException(StorageException):
+    pass
 
 
 def read(root, key):
@@ -51,7 +66,7 @@ def read(root, key):
     """
 
     path = os.path.join(root, '.soundclip', 'objects', key[0:2], key[2:40])
-    print("Asked to load", key, ", looking for", path)
+    logger.debug("Asked to load {0}, looking for {1}".format(key, path))
     if not os.path.exists(path):
         raise FileNotFoundError("The specified object doesn't exist in the database!")
 
@@ -59,11 +74,18 @@ def read(root, key):
         content = dbobj.read().strip()
 
     if not content:
-        # TODO: Illegal Object Exception: empty object!
-        return
+        raise IllegalObjectException({
+            "message": "The object read from the database returned no content. There was probably an error storing it.",
+            "key": key
+        })
 
     checksum = sha(content)
-    assert checksum == key
+    if checksum != key:
+        raise ChecksumMismatchException({
+            "message": "Cryptographic Checksum Mismatch. Was expecting {0}, got {1}".format(key, checksum),
+            "key": key,
+            "checksum": checksum
+        })
 
     return json.loads(content)
 
@@ -79,10 +101,8 @@ def write(root, d, current_hash):
     :return: the sha1 checksum that refers to this project
     """
 
-    # TODO: Do we need to sort the dictionary so objects with no change always have the same hash?
-
     s = json.dumps(d, sort_keys=True).strip()
-    print("JSON:", s)
+    logger.debug("JSON: {0}".format(s))
     checksum = sha(s)
 
     # No need to write duplicate objects
@@ -97,7 +117,7 @@ def write(root, d, current_hash):
         os.makedirs(path)
 
     object_path = os.path.join(path, checksum[2:40])
-    print("Writing", object_path)
+    logger.debug("Writing {0}".format(object_path))
     with open(object_path, "w") as f:
         f.write(s)
         f.write('\n')

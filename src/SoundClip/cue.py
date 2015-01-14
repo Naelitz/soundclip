@@ -12,12 +12,19 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
+import logging
+logger = logging.getLogger('SoundClip')
 
 from enum import Enum
 from gi.repository import GObject
 
 from SoundClip import storage
+from SoundClip.exception import SCException
 from SoundClip.storage import read, write
+
+
+class MalformedCueException(SCException):
+    pass
 
 
 class PlaybackActionType(Enum):
@@ -63,13 +70,13 @@ class Cue(GObject.GObject):
         return self.duration
 
     def go(self):
-        print("GO received for [{0:g}]{1}".format(self.number, self.name))
+        logger.debug("GO received for [{0:g}]{1}".format(self.number, self.name))
 
     def pause(self):
-        print("PAUSE received for [{0:g}]{1}".format(self.number, self.name))
+        logger.debug("PAUSE received for [{0:g}]{1}".format(self.number, self.name))
 
     def stop(self, fade=0):
-        print("STOP received for [{0:g}]{1}".format(self.number, self.name))
+        logger.debug("STOP received for [{0:g}]{1}".format(self.number, self.name))
 
     @GObject.property
     def duration(self):
@@ -228,11 +235,14 @@ def load_cue(root, key):
     """
     j = storage.read(root, key)
     if 'type' not in j:
-        # TODO: Malformed Cue Exception: Cue does nto specify type error
-        return None
+        raise MalformedCueException({
+            "message": "{0} does not specify a cue type".format(j['name'] if 'name' in j else "The cue being loaded"),
+            "key": key,
+            "root": root
+        })
 
     t = j['type']
-    print("trying to load", key, "which is of type", t)
+    logger.debug("Trying to load {0} which is of type {1}".format(key, t))
     if t is 'audio':
         return AudioCue().load(root, key, j)
     else:
@@ -313,7 +323,7 @@ class CueStack(GObject.GObject):
         if 'cues' in j:
             for cue in j['cues']:
                 c = load_cue(root, cue)
-                print("Loaded", repr(c))
+                logger.debug("Loaded {0}".format(repr(c)))
                 cues.append(c)
 
         return CueStack(name=name, cues=cues, current_hash=current_hash, last_hash=last_hash)
@@ -322,7 +332,7 @@ class CueStack(GObject.GObject):
         cues = []
 
         for cue in self.__cues:
-            print("Storing", cue.name)
+            logger.debug("Storing {0}".format(cue.name))
             cues.append(cue.store(root, {}))
 
         self.current_hash, self.last_hash = write(root, {'name': self.name, 'cues': cues,

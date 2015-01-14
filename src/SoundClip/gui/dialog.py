@@ -11,6 +11,9 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+import logging
+logger = logging.getLogger('SoundClip')
+
 from gi.repository import Gtk, Gdk
 
 
@@ -73,7 +76,17 @@ class SCProjectPropertiesDialog(Gtk.Dialog):
         self.show_all()
 
     def on_root_button(self, button):
-        print("TODO: Project Root File Chooser")
+        dialog = Gtk.FileChooserDialog("Please choose a folder", self.__main_window,
+                                       Gtk.FileChooserAction.SELECT_FOLDER,
+                                       (Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL, "Select", Gtk.ResponseType.OK))
+        dialog.set_default_size(800, 400)
+
+        result = dialog.run()
+        if result == Gtk.ResponseType.OK:
+            self.__root.set_text(dialog.get_filename())
+        elif result == Gtk.ResponseType.CANCEL:
+            logger.debug("CANCEL")
+        dialog.destroy()
 
     def on_response(self, w, response):
         if response == Gtk.ResponseType.OK:

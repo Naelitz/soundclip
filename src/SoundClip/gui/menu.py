@@ -12,6 +12,8 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
+import logging
+logger = logging.getLogger('SoundClip')
 
 from gi.repository import Gtk, Gio
 import SoundClip
@@ -92,12 +94,12 @@ class SCHeaderBar(Gtk.HeaderBar):
         result = dialog.run()
         if result == Gtk.ResponseType.OK:
             proj = dialog.get_filename()
-            print("Opening from", proj)
+            logger.debug("Opening from {0}".format(proj))
             p = Project.load(proj)
             if p:
                 self.__main_window.change_project(p)
         elif result == Gtk.ResponseType.CANCEL:
-            print("CANCEL")
+            logger.debug("CANCEL")
         dialog.destroy()
 
     def on_new_project(self, button):
@@ -111,17 +113,17 @@ class SCHeaderBar(Gtk.HeaderBar):
         if result == Gtk.ResponseType.OK:
             proj = dialog.get_filename()
             if os.path.isdir(os.path.join(proj, ".soundclip")):
-                print("Project exists!")
+                logger.error("Project exists!")
                 # TODO: Error, project exists
                 pass
             else:
-                print("Saving new project to", proj)
+                logger.info("Saving new project to {0}".format(proj))
                 p = Project()
                 p.root = proj
                 self.__main_window.change_project(p)
                 # TODO: Project Properties window?
         elif result == Gtk.ResponseType.CANCEL:
-            print("CANCEL")
+            logger.debug("CANCEL")
         dialog.destroy()
 
     def on_save_as(self, button):
@@ -136,10 +138,10 @@ class SCHeaderBar(Gtk.HeaderBar):
             result = dialog.run()
             if result == Gtk.ResponseType.OK:
                 root = dialog.get_filename()
-                print("Saving to", root)
+                logger.info("Saving to {0}".format(root))
                 self.__main_window.project.root = root
             elif result == Gtk.ResponseType.CANCEL:
-                print("CANCEL")
+                logger.debug("CANCEL")
 
             dialog.destroy()
 
@@ -150,7 +152,7 @@ class SCHeaderBar(Gtk.HeaderBar):
         """
         Callback for the Panic Button. Stops all running cues and automation tasks
         """
-        print("PANIC! Stopping all cues and automation")
+        logger.warning("PANIC! Stopping all cues and automation")
         self.__main_window.send_stop_all()
 
 
@@ -223,14 +225,14 @@ class SCAddCuemenu(Gio.Menu):
 
     def on_blank_cue(self, model, user_data):
         current = self.__main_window.get_selected_cue()
-        print("Current cue is {0}".format(current.name if current else "None"))
+        logger.debug("Current cue is {0}".format(current.name if current else "None"))
         c = Cue()
         c.number = current.number + 1 if current else 1
 
         self.display_add_dialog_for(current, c)
     
     def on_audio_cue(self, model, user_data):
-        print("TODO: Add Audio Cue")
+        logger.debug("TODO: Add Audio Cue")
 
     def display_add_dialog_for(self, current, c):
         dialog = SCCueDialog(self.__main_window, c)
@@ -243,7 +245,7 @@ class SCAddCuemenu(Gio.Menu):
             pass
     
     def on_cue_list(self, model, user_data):
-        print("TODO: Add Cue List")
+        logger.debug("TODO: Add Cue List")
 
     def get_action_group(self):
         return self.__action_group

@@ -11,6 +11,9 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+import logging
+logger = logging.getLogger('SoundClip')
+
 from gi.repository import Gtk
 
 from SoundClip import __version__
@@ -30,7 +33,7 @@ class SCMainWindow(Gtk.Window):
         self.title_bar = SCHeaderBar(self)
         self.set_titlebar(self.title_bar)
 
-        # TODO: Current cue name, description, notes, and go button
+        # TODO: Current cue name, description, notes, and go button?
 
         self.__cue_lists = SCCueListContainer(self)
         self.add(self.__cue_lists)
@@ -67,7 +70,7 @@ class SCMainWindow(Gtk.Window):
             stack.stop_all()
 
     def toggle_workspace_lock(self, button):
-        print("TODO: TOGGLE_LOCK_WORKSPACE")
+        logger.debug("TODO: TOGGLE_LOCK_WORKSPACE")
 
     def get_selected_cue(self):
         return self.__cue_lists.get_selected_cue()
