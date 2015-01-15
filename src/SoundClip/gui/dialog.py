@@ -14,7 +14,26 @@
 import logging
 logger = logging.getLogger('SoundClip')
 
-from gi.repository import Gtk, Gdk
+import SoundClip
+from SoundClip.util import get_gtk_version
+from gi.repository import Gtk, Gdk, Gst
+
+
+class SCAboutDialog(Gtk.AboutDialog):
+    def __init__(self, w, **properties):
+        super().__init__(**properties)
+        self.set_transient_for(w)
+        self.set_modal(True)
+        self.set_program_name("SoundClip")
+        self.set_version("Version {0}\nGtk: {1}\n{2}".format(
+            SoundClip.__version__,
+            get_gtk_version(),
+            Gst.version_string()
+        ))
+        self.set_license_type(Gtk.License.GPL_3_0)
+        self.set_copyright("Copyright \xa9 2014-2015 Nathan Lowe")
+        self.set_website("https://github.com/techwiz24/soundclip")
+        self.set_website_label("https://github.com/techwiz24/soundclip")
 
 
 class SCProjectPropertiesDialog(Gtk.Dialog):

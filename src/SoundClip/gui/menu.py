@@ -16,10 +16,9 @@ import logging
 logger = logging.getLogger('SoundClip')
 
 from gi.repository import Gtk, Gio
-import SoundClip
 
 from SoundClip.cue import Cue
-from SoundClip.gui.dialog import SCCueDialog, SCProjectPropertiesDialog
+from SoundClip.gui.dialog import SCCueDialog, SCProjectPropertiesDialog, SCAboutDialog
 from SoundClip.project import Project
 
 
@@ -32,6 +31,7 @@ class SCHeaderBar(Gtk.HeaderBar):
         super().__init__(**properties)
 
         self.__main_window = w
+        self.__main_window.connect('lock-toggled', self.on_workspace_lock_toggle)
 
         self.set_show_close_button(True)
 
@@ -83,6 +83,11 @@ class SCHeaderBar(Gtk.HeaderBar):
         self.__panic_button.set_tooltip_text("PANIC: Stop all automations and cues")
         self.__panic_button.connect("clicked", self.on_panic)
         self.pack_end(self.__panic_button)
+
+    def on_workspace_lock_toggle(self, obj, lock):
+        self.__add_cue_button.set_sensitive(not lock)
+        self.__open_button.set_sensitive(not lock)
+        self.__new_project_button.set_sensitive(not lock)
 
     def on_open_project(self, button):
         # TODO: Save existing project if needed
@@ -179,16 +184,7 @@ class SCSettingsMenuModel(Gio.Menu):
         self.__action_group.insert(about_action)
 
     def on_about(self, model, user_data):
-        d = Gtk.AboutDialog.new()
-        d.set_transient_for(self.__main_window)
-        d.set_modal(True)
-        d.set_program_name("SoundClip")
-        d.set_title("About SoundClip")
-        d.set_version("Version {0}".format(SoundClip.__version__))
-        d.set_license_type(Gtk.License.GPL_3_0)
-        d.set_copyright("Copyright \xa9 2014-2015 Nathan Lowe")
-        d.set_website("https://github.com/techwiz24/soundclip")
-        d.set_website_label("https://github.com/techwiz24/soundclip")
+        d = SCAboutDialog(self.__main_window)
         d.run()
         d.destroy()
 

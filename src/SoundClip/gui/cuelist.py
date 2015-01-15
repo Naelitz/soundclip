@@ -266,6 +266,8 @@ class SCCueList(Gtk.ScrolledWindow):
         self.__tree_view.set_cursor(Gtk.TreePath(pathlist[0].get_indices()[0]+1), None, False)
 
     def on_click(self, view, event):
+        if self.__main_window.locked:
+            return
         x, y = int(event.x), int(event.y)
         path = self.__tree_view.get_path_at_pos(x, y)
         cue = self.__cue_list[path[0].get_indices()[0]]

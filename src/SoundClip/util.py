@@ -12,6 +12,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import hashlib
+from gi.repository import Gtk
 
 
 def timefmt(ms):
@@ -23,3 +24,7 @@ def timefmt(ms):
 
 def sha(s: str):
     return hashlib.sha1(s.encode('utf-8')).hexdigest()
+
+
+def get_gtk_version():
+    return str(Gtk.get_major_version()) + "." + str(Gtk.get_minor_version()) + "." + str(Gtk.get_micro_version())

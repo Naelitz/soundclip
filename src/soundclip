@@ -16,6 +16,9 @@
 import argparse
 import sys
 import logging
+
+from SoundClip.util import get_gtk_version
+
 logger = logging.getLogger('SoundClip')
 logger.setLevel(0)
 
@@ -24,10 +27,6 @@ from gi.repository import Gtk, Gst
 from SoundClip import __version__
 from SoundClip.gui import mainwindow
 from SoundClip.project import Project
-
-
-def get_gtk_version():
-    return str(Gtk.get_major_version()) + "." + str(Gtk.get_minor_version()) + "." + str(Gtk.get_micro_version())
 
 
 def main():

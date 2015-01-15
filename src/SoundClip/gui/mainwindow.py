@@ -14,7 +14,7 @@
 import logging
 logger = logging.getLogger('SoundClip')
 
-from gi.repository import Gtk
+from gi.repository import GObject, Gtk
 
 from SoundClip import __version__
 from SoundClip.gui.containers import SCCueListContainer
@@ -26,6 +26,10 @@ class SCMainWindow(Gtk.Window):
     """
     The main window for SoundClip.
     """
+
+    __gsignals__ = {
+        'lock-toggled': (GObject.SIGNAL_RUN_FIRST, None, (bool, ))
+    }
 
     def __init__(self, project=None, **properties):
         super().__init__(**properties)
@@ -43,6 +47,8 @@ class SCMainWindow(Gtk.Window):
 
         self.set_size_request(800, 600)
         self.connect("delete-event", Gtk.main_quit)
+
+        self.__locked = False
 
     def change_project(self, p: Project):
         if self.__project is not None:
@@ -70,7 +76,12 @@ class SCMainWindow(Gtk.Window):
             stack.stop_all()
 
     def toggle_workspace_lock(self, button):
-        logger.debug("TODO: TOGGLE_LOCK_WORKSPACE")
+        self.__locked = not self.__locked
+        self.emit('lock-toggled', self.__locked)
+
+    @property
+    def locked(self):
+        return self.__locked
 
     def get_selected_cue(self):
         return self.__cue_lists.get_selected_cue()
