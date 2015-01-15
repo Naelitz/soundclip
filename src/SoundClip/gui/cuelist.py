@@ -192,6 +192,9 @@ class SCCueList(Gtk.ScrolledWindow):
         self.__tree_view = Gtk.TreeView()
         self.__popover = SCCueListMenu(self.__tree_view)
 
+        self.__title_widget = Gtk.Label(cue_list.name)
+        self.__cue_list.connect('renamed', self.on_rename)
+
         self.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
 
         self.__model = SCCueListModel(self.__cue_list)
@@ -257,6 +260,9 @@ class SCCueList(Gtk.ScrolledWindow):
         logger.debug("Getting Cue")
         return self.__model.get_cue_at(pathlist[0])
 
+    def get_title_widget(self):
+        return self.__title_widget
+
     def select_previous(self):
         (model, pathlist) = self.__tree_view.get_selection().get_selected_rows()
         self.__tree_view.set_cursor(Gtk.TreePath(pathlist[0].get_indices()[0]-1), None, False)
@@ -264,6 +270,9 @@ class SCCueList(Gtk.ScrolledWindow):
     def select_next(self):
         (model, pathlist) = self.__tree_view.get_selection().get_selected_rows()
         self.__tree_view.set_cursor(Gtk.TreePath(pathlist[0].get_indices()[0]+1), None, False)
+
+    def on_rename(self, obj, name):
+        self.__title_widget.set_text(name)
 
     def on_click(self, view, event):
         if self.__main_window.locked:

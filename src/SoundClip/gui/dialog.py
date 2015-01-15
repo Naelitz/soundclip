@@ -36,6 +36,34 @@ class SCAboutDialog(Gtk.AboutDialog):
         self.set_website_label("https://github.com/techwiz24/soundclip")
 
 
+class SCRenameCueListDialog(Gtk.Dialog):
+    def __init__(self, w, name, **properties):
+        super().__init__("Rename CueList - {0}".format(name), w, 0,
+                         (Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL, Gtk.STOCK_OK, Gtk.ResponseType.OK), **properties)
+        self.__main_window = w
+        grid = Gtk.Grid()
+        grid.attach(Gtk.Label("Name:"), 0, 0, 1, 1)
+
+        self.__name = Gtk.Entry()
+        self.__name.set_text(name)
+        self.__name.set_hexpand(True)
+        self.__name.set_halign(Gtk.Align.FILL)
+        grid.attach(self.__name, 1, 0, 1, 1)
+
+        self.get_content_area().pack_start(grid, True, True, 0)
+        self.set_modal(True)
+        w, h = self.__main_window.get_size()
+        g = Gdk.Geometry()
+        g.min_width = int(float(w) * .7)
+        g.max_width = int(float(w) * .7)
+        g.max_height = int(float(h) * .7)
+        self.set_geometry_hints(None, g, Gdk.WindowHints.MIN_SIZE | Gdk.WindowHints.MAX_SIZE)
+        self.show_all()
+
+    def get_name(self):
+        return self.__name.get_text()
+
+
 class SCProjectPropertiesDialog(Gtk.Dialog):
     def __init__(self, w, **properties):
         super().__init__("Project Properties - {0}".format(w.project.name), w, 0,

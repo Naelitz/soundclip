@@ -86,8 +86,11 @@ class SCMainWindow(Gtk.Window):
     def get_selected_cue(self):
         return self.__cue_lists.get_selected_cue()
 
+    def get_current_cue_stack(self):
+        return self.__cue_lists.get_current_stack()
+
     def add_cue_relative_to(self, existing, cue):
-        stack = self.__cue_lists.get_current_stack()
+        stack = self.get_current_cue_stack()
         if existing:
             stack.add_cue_relative_to(existing, cue)
         else:

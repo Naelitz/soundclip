@@ -16,6 +16,7 @@ import os
 import logging
 logger = logging.getLogger('SoundClip')
 
+from enum import Enum
 from gi.repository import GObject
 
 from SoundClip.cue import CueStack
@@ -31,7 +32,18 @@ class IllegalProjectStateException(SCException):
     pass
 
 
+class StackChangeAction(Enum):
+    INSERT = 0
+    UPDATE = 1
+    DELETE = 2
+
+
 class Project(GObject.GObject):
+
+    __gsignals__ = {
+        'stack-changed': (GObject.SIGNAL_RUN_FIRST, None, (int, GObject.TYPE_PYOBJECT))
+    }
+
     name = GObject.Property(type=str)
     creator = GObject.Property(type=str)
     root = GObject.property(type=str)
@@ -48,6 +60,59 @@ class Project(GObject.GObject):
         self.current_hash = current_hash
         self.last_hash = last_hash
         self.__dirty = True
+
+    def __iadd__(self, other):
+        if not isinstance(other, CueStack):
+            raise TypeError("Can't add type {0} to Project".format(type(other)))
+        self.cue_stacks.append(other)
+        self.emit('stack-changed', len(self.cue_stacks)-1, StackChangeAction.INSERT)
+
+        return self
+
+    def add_cuelist(self, other):
+        if not isinstance(other, CueStack):
+            raise TypeError("Can't add type {0} to Project".format(type(other)))
+        self.cue_stacks.append(other)
+        self.emit('stack-changed', len(self.cue_stacks)-1, StackChangeAction.INSERT)
+
+    def __isub__(self, other):
+        if not isinstance(other, CueStack):
+            raise TypeError("Can't remove type {0} from Project".format(type(other)))
+        elif other not in self.cue_stacks:
+            raise ValueError("{0} isn't in this project".format(other))
+
+        key = self.cue_stacks.index(other)
+        self.cue_stacks.remove(key)
+
+        self.emit('stack-changed', key, StackChangeAction.DELETE)
+
+        return self
+
+    def remove_cuelist(self, other):
+        if not isinstance(other, CueStack):
+            raise TypeError("Can't remove type {0} from Project".format(type(other)))
+        elif other not in self.cue_stacks:
+            raise ValueError("{0} isn't in this project".format(other))
+
+        key = self.cue_stacks.index(other)
+        self.cue_stacks.remove(key)
+
+        self.emit('stack-changed', key, StackChangeAction.DELETE)
+
+    def __setitem__(self, key, value):
+        if not isinstance(value, CueStack):
+            raise TypeError("Cannot add type {0} to CueList".format(type(value)))
+
+        i = len(self.cue_stacks)
+        self.cue_stacks[key] = value
+
+        self.emit('stack-changed', key, StackChangeAction.UPDATE if 0 <= key < i else StackChangeAction.INSERT)
+
+    def __getitem__(self, item):
+        return self.cue_stacks[item]
+
+    def __len__(self):
+        return len(self.cue_stacks)
 
     def close(self):
         # TODO: Stop all playing cues

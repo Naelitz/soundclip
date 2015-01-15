@@ -17,8 +17,8 @@ logger = logging.getLogger('SoundClip')
 
 from gi.repository import Gtk, Gio
 
-from SoundClip.cue import Cue
-from SoundClip.gui.dialog import SCCueDialog, SCProjectPropertiesDialog, SCAboutDialog
+from SoundClip.cue import Cue, CueStack
+from SoundClip.gui.dialog import SCCueDialog, SCProjectPropertiesDialog, SCAboutDialog, SCRenameCueListDialog
 from SoundClip.project import Project
 
 
@@ -173,6 +173,11 @@ class SCSettingsMenuModel(Gio.Menu):
 
         self.__action_group = Gio.SimpleActionGroup()
 
+        rename_action = Gio.SimpleAction.new("rename", None)
+        rename_action.connect("activate", self.on_rename)
+        self.append("Rename CueList", "hb.rename")
+        self.__action_group.insert(rename_action)
+
         properties_action = Gio.SimpleAction.new("properties", None)
         properties_action.connect("activate", self.on_properties)
         self.append("Project Properties", "hb.properties")
@@ -182,6 +187,13 @@ class SCSettingsMenuModel(Gio.Menu):
         about_action.connect("activate", self.on_about)
         self.append("About", "hb.about")
         self.__action_group.insert(about_action)
+
+    def on_rename(self, model, user_data):
+        d = SCRenameCueListDialog(self.__main_window, self.__main_window.get_current_cue_stack().name)
+        result = d.run()
+        if result == Gtk.ResponseType.OK:
+            self.__main_window.get_current_cue_stack().rename(d.get_name())
+        d.destroy()
 
     def on_about(self, model, user_data):
         d = SCAboutDialog(self.__main_window)
@@ -241,7 +253,14 @@ class SCAddCuemenu(Gio.Menu):
             pass
     
     def on_cue_list(self, model, user_data):
-        logger.debug("TODO: Add Cue List")
+        cl = CueStack(name="Untitled Cue List")
+        d = SCRenameCueListDialog(self.__main_window, cl.name)
+        result = d.run()
+        if result == Gtk.ResponseType.OK:
+            cl.rename(d.get_name())
+            logger.debug("Adding CueList {0}".format(cl.name))
+            self.__main_window.project.add_cuelist(cl)
+        d.destroy()
 
     def get_action_group(self):
         return self.__action_group

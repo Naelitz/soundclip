@@ -258,7 +258,8 @@ class CueStackChangeType(Enum):
 
 class CueStack(GObject.GObject):
     __gsignals__ = {
-        'changed': (GObject.SIGNAL_RUN_FIRST, None, (int, GObject.TYPE_PYOBJECT))
+        'changed': (GObject.SIGNAL_RUN_FIRST, None, (int, GObject.TYPE_PYOBJECT)),
+        'renamed': (GObject.SIGNAL_RUN_FIRST, None, (str, ))
     }
 
     name = GObject.property(type=str)
@@ -280,6 +281,9 @@ class CueStack(GObject.GObject):
         return self.__cues[key]
 
     def __setitem__(self, key, value):
+        if not isinstance(value, Cue):
+            raise TypeError("Cannot add type {0} to CueList".format(type(value)))
+
         l = len(self.__cues)
         self.__cues[key] = value
 
@@ -295,11 +299,17 @@ class CueStack(GObject.GObject):
         return item in self.__cues
 
     def __iadd__(self, other):
+        if not isinstance(other, Cue):
+            raise TypeError("Cannot add type {0} to CueList".format(type(other)))
+
         self.__cues.append(other)
         self.emit('changed', len(self.__cues)-1, CueStackChangeType.INSERT)
         return self
 
     def __isub__(self, other):
+        if not isinstance(other, Cue):
+            raise TypeError("Cannot add type {0} to CueList".format(type(other)))
+
         i = self.__cues.index(other)
         self.__cues.remove(other)
         self.emit('changed', i, CueStackChangeType.DELETE)
@@ -338,6 +348,11 @@ class CueStack(GObject.GObject):
         self.current_hash, self.last_hash = write(root, {'name': self.name, 'cues': cues,
                                                          'previousRevision': self.last_hash}, self.current_hash)
         return self.current_hash
+
+    def rename(self, name):
+        self.name = name
+        self.emit('renamed', name)
+        logger.debug("CueList renamed to {0}".format(name))
 
     def stop_all(self):
         for cue in self.__cues:

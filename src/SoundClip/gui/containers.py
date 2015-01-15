@@ -11,6 +11,11 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+import logging
+from SoundClip.project import StackChangeAction
+
+logger = logging.getLogger('SoundClip')
+
 from gi.repository import Gtk
 
 from SoundClip.gui.cuelist import SCCueList
@@ -29,12 +34,36 @@ class SCCueListContainer(Gtk.Notebook):
         self.set_vexpand(True)
         self.set_valign(Gtk.Align.FILL)
 
+        self.__project = None
+        self.__cbid = None
+
+    def update_show_tabs(self):
+        self.set_show_tabs(True if self.get_n_pages() > 1 else False)
+
     def on_project_changed(self, p):
+        if self.__project is not None and self.__cbid is not None:
+            logger.debug("Disconnecting callbacks from previous project")
+            self.__project.disconnect(self.__cbid)
+
+        self.__project = p
+        self.__cbid = self.__project.connect('stack-changed', self.on_stacks_changed)
+
         for i in range(0, self.get_n_pages()):
             self.remove_page(-1)
         for stack in p.cue_stacks:
-            self.append_page(SCCueList(self.__main_window, stack), Gtk.Label(stack.name))
-        self.set_show_tabs(True if self.get_n_pages() > 1 else False)
+            stack_container = SCCueList(self.__main_window, stack)
+            self.append_page(stack_container, stack_container.get_title_widget())
+        self.update_show_tabs()
+        self.show_all()
+
+    def on_stacks_changed(self, obj, key, action):
+        logger.debug("Stack Changed: {0}, Action: {1}".format(key, action))
+        if action is StackChangeAction.INSERT:
+            stack_container = SCCueList(self.__main_window, self.__main_window.project[key])
+            self.append_page(stack_container, stack_container.get_title_widget())
+        elif action is StackChangeAction.DELETE:
+            self.remove_page(key)
+        self.update_show_tabs()
         self.show_all()
 
     def get_selected_cue(self):
