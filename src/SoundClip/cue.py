@@ -224,9 +224,11 @@ class AudioCue(Cue):
             self.fade_in_time = w.get_fade_in_time()
             self.fade_out_time = w.get_fade_out_time()
 
+    def go(self):
+        super().go()
+        self.play()
+
     def play(self):
-        logger.debug("AudioCue GO")
-        super().play()
         self.__pbc.play()
 
         # TODO: Prewait / Postwait timers
