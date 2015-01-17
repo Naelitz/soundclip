@@ -17,7 +17,7 @@ logger = logging.getLogger('SoundClip')
 
 from gi.repository import Gtk, Gio
 
-from SoundClip.cue import Cue, CueStack
+from SoundClip.cue import Cue, CueStack, AudioCue
 from SoundClip.gui.dialog import SCCueDialog, SCProjectPropertiesDialog, SCAboutDialog, SCRenameCueListDialog
 from SoundClip.project import Project
 
@@ -234,13 +234,18 @@ class SCAddCuemenu(Gio.Menu):
     def on_blank_cue(self, model, user_data):
         current = self.__main_window.get_selected_cue()
         logger.debug("Current cue is {0}".format(current.name if current else "None"))
-        c = Cue()
+        c = Cue(self.__main_window.project)
         c.number = current.number + 1 if current else 1
 
         self.display_add_dialog_for(current, c)
     
     def on_audio_cue(self, model, user_data):
-        logger.debug("TODO: Add Audio Cue")
+        current = self.__main_window.get_selected_cue()
+        logger.debug("Current cue is {0}".format(current.name if current else "None"))
+        c = AudioCue(self.__main_window.project)
+        c.number = current.number + 1 if current else 1
+
+        self.display_add_dialog_for(current, c)
 
     def display_add_dialog_for(self, current, c):
         dialog = SCCueDialog(self.__main_window, c)
@@ -253,7 +258,7 @@ class SCAddCuemenu(Gio.Menu):
             pass
     
     def on_cue_list(self, model, user_data):
-        cl = CueStack(name="Untitled Cue List")
+        cl = CueStack(name="Untitled Cue List", project=self.__main_window.project)
         d = SCRenameCueListDialog(self.__main_window, cl.name)
         result = d.run()
         if result == Gtk.ResponseType.OK:

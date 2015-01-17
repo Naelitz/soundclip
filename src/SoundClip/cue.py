@@ -13,10 +13,12 @@
 
 import os
 import logging
+from SoundClip.audio import PlaybackController
+
 logger = logging.getLogger('SoundClip')
 
 from enum import Enum
-from gi.repository import GObject
+from gi.repository import GObject, Gtk
 
 from SoundClip import storage
 from SoundClip.exception import SCException
@@ -57,8 +59,11 @@ class Cue(GObject.GObject):
     current_hash = GObject.Property(type=str)
     last_hash = GObject.Property(type=str)
 
-    def __init__(self, name="Untitled Cue", description="", notes="", number=-1.0, pre_wait=0, post_wait=0):
+    def __init__(self, project, name="Untitled Cue", description="", notes="", number=-1.0, pre_wait=0, post_wait=0):
         GObject.GObject.__init__(self)
+
+        self.__project = project
+
         self.name = name
         self.description = description
         self.notes = notes
@@ -70,7 +75,7 @@ class Cue(GObject.GObject):
         return self.duration
 
     def go(self):
-        logger.debug("GO received for [{0:g}]{1}".format(self.number, self.name))
+        logger.debug("(CUE) GO received for [{0:g}]{1}".format(self.number, self.name))
 
     def pause(self):
         logger.debug("PAUSE received for [{0:g}]{1}".format(self.number, self.name))
@@ -137,7 +142,6 @@ class Cue(GObject.GObject):
         d['preWait'] = self.pre_wait
         d['postWait'] = self.post_wait
         d['previousRevision'] = self.last_hash
-        d['type'] = 'unknown'
 
         self.current_hash, self.last_hash = write(root, d, self.current_hash)
 
@@ -173,29 +177,75 @@ class AudioCue(Cue):
     TODO: clamping
     """
 
-    audio_source_uri = GObject.Property(type=str)
     pitch = GObject.Property(type=float, minimum=-1.0, maximum=1.0)
     pan = GObject.Property(type=float, minimum=-1.0, maximum=1.0)
     gain = GObject.Property(type=float, minimum=-1.0, maximum=1.0)
     fade_in_time = GObject.Property(type=GObject.TYPE_LONG, default=0)
     fade_out_time = GObject.Property(type=GObject.TYPE_LONG, default=0)
 
-    def __init__(self, name="Untitled Cue", description="", notes="", number=-1.0, pre_wait=0, post_wait=0,
+    def __init__(self, project, name="Untitled Cue", description="", notes="", number=-1.0, pre_wait=0, post_wait=0,
                  audio_source_uri="", pitch=0, pan=0, gain=0, fade_in_time=0, fade_out_time=0):
-        super().__init__(name, description, notes, number, pre_wait, post_wait)
-        self.audio_source_uri = audio_source_uri
+        super().__init__(project, name, description, notes, number, pre_wait, post_wait)
+
+        logger.debug("Init Audio Cue")
+
+        self.__project = project
+
+        self.__src = audio_source_uri
         self.pitch = pitch
         self.pan = pan
         self.gain = gain
         self.fade_in_time = fade_in_time
         self.fade_out_time = fade_out_time
 
+        self.__pbc = PlaybackController("file://" + os.path.abspath(os.path.join(project.root, self.__src)))
+
+    @property
+    def audio_source_uri(self):
+        return self.__src
+
+    def change_source(self, src):
+        self.__src = src
+        logger.debug("Audio source changed for {0} to {1}, changing playback controller".format(self.name, src))
+        if self.__pbc.playing:
+            self.__pbc.stop()
+        self.__pbc = PlaybackController("file://" + os.path.abspath(os.path.join(self.__project.root, src)))
+        self.__pbc.preroll()
+
+    def get_editor(self):
+        return SCAudioCueEditorWidget(self, self.__project.root)
+
+    def on_editor_closed(self, w, save=True):
+        if save:
+            self.change_source(w.get_source())
+            self.pitch = w.get_pitch()
+            self.pan = w.get_pan()
+            self.gain = w.get_gain()
+            self.fade_in_time = w.get_fade_in_time()
+            self.fade_out_time = w.get_fade_out_time()
+
+    def play(self):
+        logger.debug("AudioCue GO")
+        super().play()
+        self.__pbc.play()
+
+        # TODO: Prewait / Postwait timers
+        # TODO: Register timer to update progress bars
+
+    def pause(self):
+        super().pause()
+        self.__pbc.pause()
+
+    def stop(self, fade=0):
+        super().stop(fade)
+        self.__pbc.stop()
+
     def load(self, root, key, j):
         super().load(root, key, j)
 
-        self.audio_source_uri = j['src'] if 'src' in j else ""
+        self.change_source(j['src'] if 'src' in j else "")
 
-        if not os.path.exists(os.path.join(root, self.audio_soruce_uri)):
+        if not os.path.exists(os.path.join(root, self.audio_source_uri)):
             # TODO: Warn about nonexistent audio file source
             pass
 
@@ -220,12 +270,116 @@ class AudioCue(Cue):
 GObject.type_register(AudioCue)
 
 
+class SCAudioCueEditorWidget(Gtk.Grid):
+    def __init__(self, cue, root, **properties):
+        super().__init__(**properties)
+
+        self.__root = root
+
+        source_label = Gtk.Label("Source:")
+        source_label.set_halign(Gtk.Align.END)
+        self.attach(source_label, 0, 0, 1, 1)
+        self.__source_entry = Gtk.Entry()
+        self.__source_entry.set_text(cue.audio_source_uri)
+        self.__source_entry.set_hexpand(True)
+        self.__source_entry.set_halign(Gtk.Align.FILL)
+        self.attach(self.__source_entry, 1, 0, 1, 1)
+        source_button = Gtk.Button("...")
+        source_button.connect('clicked', self.on_source)
+        self.attach(source_button, 2, 0, 1, 1)
+
+        pitch_label = Gtk.Label("Pitch Adjustment:")
+        pitch_label.set_halign(Gtk.Align.END)
+        self.attach(pitch_label, 0, 1, 1, 1)
+        self.__pitch_scale = Gtk.Scale.new_with_range(Gtk.Orientation.HORIZONTAL, -1.0, 1.0, 0.1)
+        self.__pitch_scale.set_value(cue.pitch)
+        self.__pitch_scale.set_hexpand(True)
+        self.__pitch_scale.set_halign(Gtk.Align.FILL)
+        self.attach(self.__pitch_scale, 1, 1, 2, 1)
+
+        pan_adjustment = Gtk.Label("Pan Adjustment:")
+        pan_adjustment.set_halign(Gtk.Align.END)
+        self.attach(pan_adjustment, 0, 2, 1, 1)
+        self.__pan_scale = Gtk.Scale.new_with_range(Gtk.Orientation.HORIZONTAL, -1.0, 1.0, 0.1)
+        self.__pan_scale.set_value(cue.pan)
+        self.__pan_scale.set_hexpand(True)
+        self.__pan_scale.set_halign(Gtk.Align.FILL)
+        self.attach(self.__pan_scale, 1, 2, 2, 1)
+
+        gain_label = Gtk.Label("Gain Adjustment:")
+        gain_label.set_halign(Gtk.Align.END)
+        self.attach(gain_label, 0, 3, 1, 1)
+        self.__gain_scale = Gtk.Scale.new_with_range(Gtk.Orientation.HORIZONTAL, -1.0, 1.0, 0.1)
+        self.__gain_scale.set_value(cue.gain)
+        self.__gain_scale.set_hexpand(True)
+        self.__gain_scale.set_halign(Gtk.Align.FILL)
+        self.attach(self.__gain_scale, 1, 3, 2, 1)
+
+        fade_in_label = Gtk.Label("Fade In Time:")
+        fade_in_label.set_halign(Gtk.Align.END)
+        self.attach(fade_in_label, 0, 4, 1, 1)
+        self.__fade_in_time_entry = Gtk.Entry()
+        self.__fade_in_time_entry.set_text(str(cue.fade_in_time))
+        self.__fade_in_time_entry.set_hexpand(True)
+        self.__fade_in_time_entry.set_halign(Gtk.Align.FILL)
+        self.attach(self.__fade_in_time_entry, 1, 4, 2, 1)
+
+        fade_out_label = Gtk.Label("Fade Out Time:")
+        fade_out_label.set_halign(Gtk.Align.END)
+        self.attach(fade_out_label, 0, 5, 1, 1)
+        self.__fade_out_time_entry = Gtk.Entry()
+        self.__fade_out_time_entry.set_text(str(cue.fade_out_time))
+        self.__fade_out_time_entry.set_hexpand(True)
+        self.__fade_out_time_entry.set_halign(Gtk.Align.FILL)
+        self.attach(self.__fade_out_time_entry, 1, 5, 2, 1)
+
+    def on_source(self, button):
+        dialog = Gtk.FileChooserDialog("Select Audio File",
+                                       button.get_parent().get_parent().get_parent().get_parent().get_parent().get_parent(),
+                                       Gtk.FileChooserAction.OPEN,
+                                       (Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL, "Open", Gtk.ResponseType.OK))
+        dialog.set_default_size(800, 400)
+
+        # TODO: Set initial directory to project root
+
+        result = dialog.run()
+        if result == Gtk.ResponseType.OK:
+            p = dialog.get_filename()
+            r = os.path.relpath(p, start=self.__root)
+
+            # TODO: Validate path
+
+            self.__source_entry.set_text(r)
+        elif result == Gtk.ResponseType.CANCEL:
+            logger.debug("CANCEL")
+
+        dialog.destroy()
+
+    def get_source(self):
+        return self.__source_entry.get_text()
+
+    def get_pitch(self):
+        return self.__pitch_scale.get_value()
+
+    def get_pan(self):
+        return self.__pan_scale.get_value()
+
+    def get_gain(self):
+        return self.__gain_scale.get_value()
+
+    def get_fade_in_time(self):
+        return self.__fade_in_time_entry.get_text()
+
+    def get_fade_out_time(self):
+        return self.__fade_out_time_entry.get_text()
+
+
 class ControlCue(Cue):
     pass
 GObject.type_register(ControlCue)
 
 
-def load_cue(root, key):
+def load_cue(root, key, project):
     """
     Loads the cue identified by the specified hash from the object store and initializes the cue according to its type
 
@@ -241,13 +395,13 @@ def load_cue(root, key):
             "root": root
         })
 
-    t = j['type']
+    t = j['type'] if 'type' in j else 'unknown'
     logger.debug("Trying to load {0} which is of type {1}".format(key, t))
-    if t is 'audio':
-        return AudioCue().load(root, key, j)
+    if t == 'audio':
+        return AudioCue(project=project).load(root, key, j)
     else:
         # TODO: Unknown Cue Type. Missing plugin?
-        return Cue().load(root, key, j)
+        return Cue(project=project).load(root, key, j)
 
 
 class CueStackChangeType(Enum):
@@ -266,8 +420,11 @@ class CueStack(GObject.GObject):
     current_hash = GObject.property(type=str)
     last_hash = GObject.property(type=str)
 
-    def __init__(self, name="Default Cue Stack", cues=None, current_hash=None, last_hash=None):
+    def __init__(self, project, name="Default Cue Stack", cues=None, current_hash=None, last_hash=None):
         GObject.GObject.__init__(self)
+
+        self.__project = project
+
         self.name = name
         self.current_hash = current_hash
         self.last_hash = last_hash
@@ -323,7 +480,7 @@ class CueStack(GObject.GObject):
         self.emit('changed', self.index(existing)+1, CueStackChangeType.DELETE)
 
     @staticmethod
-    def load(root, key):
+    def load(root, key, project):
         j = read(root, key)
 
         name = j['name'] if 'name' in j else "Untitled Cue Stack"
@@ -332,11 +489,11 @@ class CueStack(GObject.GObject):
         cues = []
         if 'cues' in j:
             for cue in j['cues']:
-                c = load_cue(root, cue)
+                c = load_cue(root, cue, project)
                 logger.debug("Loaded {0}".format(repr(c)))
                 cues.append(c)
 
-        return CueStack(name=name, cues=cues, current_hash=current_hash, last_hash=last_hash)
+        return CueStack(name=name, cues=cues, current_hash=current_hash, last_hash=last_hash, project=project)
 
     def store(self, root):
         cues = []

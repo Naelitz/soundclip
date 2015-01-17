@@ -56,7 +56,7 @@ class Project(GObject.GObject):
         self.name = name
         self.creator = creator
         self.root = root
-        self.cue_stacks = [CueStack(), ] if cue_stacks is None else cue_stacks
+        self.cue_stacks = [CueStack(project=self), ] if cue_stacks is None else cue_stacks
         self.current_hash = current_hash
         self.last_hash = last_hash
         self.__dirty = True
@@ -115,7 +115,8 @@ class Project(GObject.GObject):
         return len(self.cue_stacks)
 
     def close(self):
-        # TODO: Stop all playing cues
+        for stack in self.cue_stacks:
+            stack.stop_all()
         # TODO: Save project to disk if new
         pass
 
@@ -139,13 +140,14 @@ class Project(GObject.GObject):
         creator = j['creator'] if 'creator' in j else ""
         last_hash = j['previousRevision'] if 'previousRevision' in j else None
 
-        stacks = []
+        p = Project(name=name, creator=creator, root=path, cue_stacks=[], current_hash=sha(content),
+                    last_hash=last_hash)
+
         if 'stacks' in j:
             for key in j['stacks']:
-                stacks.append(CueStack.load(path, key))
+                p += CueStack.load(path, key, p)
 
-        return Project(name=name, creator=creator, root=path, cue_stacks=stacks, current_hash=sha(content),
-                       last_hash=last_hash)
+        return p
 
     def store(self):
         if not self.root:

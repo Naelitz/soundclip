@@ -289,7 +289,10 @@ class SCCueList(Gtk.ScrolledWindow):
 
     def on_key(self, view, event):
         if event.keyval is Gdk.KEY_space:
-            self.get_selected().go()
+            c = self.get_selected()
+            logger.debug("Type of selected cue is {0}".format(str(type(c))))
+            logger.debug(c.go)
+            c.go()
             self.select_next()
             return False
         return True

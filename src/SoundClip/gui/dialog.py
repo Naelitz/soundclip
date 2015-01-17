@@ -155,6 +155,8 @@ class SCCueDialog(Gtk.Dialog):
         self.__editor = self.__cue.get_editor()
 
         grid = Gtk.Grid()
+        grid.set_vexpand(True)
+        grid.set_valign(Gtk.Align.FILL)
 
         # TODO: Common Cue Editor
         name_label = Gtk.Label("Name")
@@ -217,8 +219,9 @@ class SCCueDialog(Gtk.Dialog):
         g = Gdk.Geometry()
         g.min_width = int(float(w) * .7)
         g.max_width = int(float(w) * .7)
-        g.max_height = int(float(h) * .7)
-        self.set_geometry_hints(None, g, Gdk.WindowHints.MIN_SIZE | Gdk.WindowHints.MAX_SIZE)
+        g.min_height = int(float(h) * .7)
+        g.max_height = int(float(h) * .9)
+        self.set_geometry_hints(self, g, Gdk.WindowHints.MIN_SIZE | Gdk.WindowHints.MAX_SIZE)
         self.connect('response', self.on_response)
         self.show_all()
 
@@ -236,6 +239,6 @@ class SCCueDialog(Gtk.Dialog):
             self.__cue.pre_wait = float(self.__prewait.get_text())
             self.__cue.post_wait = float(self.__postwait.get_text())
 
-            self.__cue.on_editor_closed(self.__editor)
+            self.__cue.on_editor_closed(self.__editor, save=True)
         else:
             self.__cue.on_editor_closed(self.__editor, save=False)

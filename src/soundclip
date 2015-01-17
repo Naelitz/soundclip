@@ -22,7 +22,7 @@ from SoundClip.util import get_gtk_version
 logger = logging.getLogger('SoundClip')
 logger.setLevel(0)
 
-from gi.repository import Gtk, Gst
+from gi.repository import GObject, Gtk, Gst
 
 from SoundClip import __version__
 from SoundClip.gui import mainwindow
@@ -55,6 +55,7 @@ def main():
         logger.info("Trying to load project from {0}".format(args.project))
         p = Project.load(args.project)
 
+    GObject.threads_init()
     Gtk.init(sys.argv)
     Gst.init(sys.argv)
 

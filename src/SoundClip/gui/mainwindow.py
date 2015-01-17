@@ -46,9 +46,13 @@ class SCMainWindow(Gtk.Window):
         self.change_project(self.__project)
 
         self.set_size_request(800, 600)
-        self.connect("delete-event", Gtk.main_quit)
+        self.connect("delete-event", self.on_close)
 
         self.__locked = False
+
+    def on_close(self, *args):
+        self.project.close()
+        Gtk.main_quit(*args)
 
     def change_project(self, p: Project):
         if self.__project is not None:
