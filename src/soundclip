@@ -50,14 +50,13 @@ def main():
         raise ValueError('Invalid log level: %s' % args.log)
     init_logging(numeric_level)
 
+    Gtk.init(sys.argv)
+    Gst.init(sys.argv)
+
     p = None
     if args.project:
         logger.info("Trying to load project from {0}".format(args.project))
         p = Project.load(args.project)
-
-    GObject.threads_init()
-    Gtk.init(sys.argv)
-    Gst.init(sys.argv)
 
     Gtk.Settings.get_default().set_property('gtk-application-prefer-dark-theme', True)
 

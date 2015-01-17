@@ -157,8 +157,12 @@ class SCHeaderBar(Gtk.HeaderBar):
         """
         Callback for the Panic Button. Stops all running cues and automation tasks
         """
-        logger.warning("PANIC! Stopping all cues and automation")
-        self.__main_window.send_stop_all()
+        p = self.__main_window.project
+        ft = p.panic_fade_time
+        logger.warning("PANIC! Stopping all cues and automation over {0} ms".format(
+            self.__main_window.project.panic_fade_time
+        ))
+        self.__main_window.send_stop_all(fade=1000)
 
 
 class SCSettingsMenuModel(Gio.Menu):

@@ -212,6 +212,10 @@ class AudioCue(Cue):
         self.__pbc = PlaybackController("file://" + os.path.abspath(os.path.join(self.__project.root, src)))
         self.__pbc.preroll()
 
+    @GObject.Property
+    def duration(self):
+        return self.__pbc.get_duration()
+
     def get_editor(self):
         return SCAudioCueEditorWidget(self, self.__project.root)
 
@@ -228,19 +232,19 @@ class AudioCue(Cue):
         super().go()
         self.play()
 
-    def play(self):
-        self.__pbc.play()
+    def play(self, fade=0):
+        self.__pbc.play(fade=fade)
 
         # TODO: Prewait / Postwait timers
         # TODO: Register timer to update progress bars
 
-    def pause(self):
+    def pause(self, fade=0):
         super().pause()
-        self.__pbc.pause()
+        self.__pbc.pause(fade=fade)
 
     def stop(self, fade=0):
         super().stop(fade)
-        self.__pbc.stop()
+        self.__pbc.stop(fade)
 
     def load(self, root, key, j):
         super().load(root, key, j)
@@ -452,7 +456,7 @@ class CueStack(GObject.GObject):
         return self.__cues.__iter__()
 
     def __reversed__(self):
-        return CueStack(name=self.name, cues=reversed(self.__cues))
+        return CueStack(name=self.name, cues=reversed(self.__cues), project=self.__project)
 
     def __contains__(self, item):
         return item in self.__cues
@@ -513,6 +517,6 @@ class CueStack(GObject.GObject):
         self.emit('renamed', name)
         logger.debug("CueList renamed to {0}".format(name))
 
-    def stop_all(self):
+    def stop_all(self, fade=0):
         for cue in self.__cues:
-            cue.stop()
+            cue.stop(fade=fade)

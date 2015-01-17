@@ -75,9 +75,9 @@ class SCMainWindow(Gtk.Window):
     def project(self):
         return self.__project
 
-    def send_stop_all(self):
+    def send_stop_all(self, fade=0):
         for stack in self.__project.cue_stacks:
-            stack.stop_all()
+            stack.stop_all(fade=fade)
 
     def toggle_workspace_lock(self, button):
         self.__locked = not self.__locked

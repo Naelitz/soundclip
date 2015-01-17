@@ -83,13 +83,13 @@ class SCCueListModel(Gtk.TreeStore):
             1: self.__cue_list[itr.user_data].description,
             2: self.__cue_list[itr.user_data].notes,
             3: '{0:g}'.format(self.__cue_list[itr.user_data].number),
-            4: 0 if self.__cue_list[itr.user_data].pre_wait is 0 else self.__cue_list[itr.user_data].elapsed_prewait /
+            4: 0 if self.__cue_list[itr.user_data].pre_wait <= 0 else self.__cue_list[itr.user_data].elapsed_prewait /
                                                                       self.__cue_list[itr.user_data].pre_wait,
             5: self.__elapsed_pre(self.__cue_list[itr.user_data]),
-            6: 0 if self.__cue_list[itr.user_data].duration is 0 else self.__cue_list[itr.user_data].elapsed /
+            6: 0 if self.__cue_list[itr.user_data].duration <= 0 else self.__cue_list[itr.user_data].elapsed /
                                                                       self.__cue_list[itr.user_data].duration,
             7: self.__elapsed(self.__cue_list[itr.user_data]),
-            8: 0 if self.__cue_list[itr.user_data].post_wait is 0 else self.__cue_list[itr.user_data].elapsed_postwait /
+            8: 0 if self.__cue_list[itr.user_data].post_wait <= 0 else self.__cue_list[itr.user_data].elapsed_postwait /
                                                                       self.__cue_list[itr.user_data].post_wait,
             9: self.__elapsed_post(self.__cue_list[itr.user_data]),
         }.get(column, None)

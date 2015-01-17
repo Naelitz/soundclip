@@ -47,16 +47,18 @@ class Project(GObject.GObject):
     name = GObject.Property(type=str)
     creator = GObject.Property(type=str)
     root = GObject.property(type=str)
+    panic_fade_time = GObject.property(type=GObject.TYPE_LONG)
     current_hash = GObject.property(type=str)
     last_hash = GObject.property(type=str)
 
-    def __init__(self, name="Untitled Project", creator="", root="", cue_stacks=None, current_hash=None,
-                 last_hash=None):
+    def __init__(self, name="Untitled Project", creator="", root="", panic_fade_time=500, cue_stacks=None,
+                 current_hash=None, last_hash=None):
         GObject.GObject.__init__(self)
         self.name = name
         self.creator = creator
         self.root = root
         self.cue_stacks = [CueStack(project=self), ] if cue_stacks is None else cue_stacks
+        self.panic_fade_time = panic_fade_time
         self.current_hash = current_hash
         self.last_hash = last_hash
         self.__dirty = True
@@ -138,10 +140,11 @@ class Project(GObject.GObject):
 
         name = j['name'] if 'name' in j else "Untitled Project"
         creator = j['creator'] if 'creator' in j else ""
+        panic_fade_time = j['panicFadeTime'] if 'panicFadeTime' in j else 500
         last_hash = j['previousRevision'] if 'previousRevision' in j else None
 
-        p = Project(name=name, creator=creator, root=path, cue_stacks=[], current_hash=sha(content),
-                    last_hash=last_hash)
+        p = Project(name=name, creator=creator, root=path, cue_stacks=[], panic_fade_time=panic_fade_time,
+                    current_hash=sha(content), last_hash=last_hash)
 
         if 'stacks' in j:
             for key in j['stacks']:
@@ -158,7 +161,7 @@ class Project(GObject.GObject):
         if not os.path.exists(self.root) or not os.path.isdir(self.root):
             os.makedirs(self.root)
 
-        d = {'name': self.name, 'creator': self.creator, 'stacks': []}
+        d = {'name': self.name, 'creator': self.creator, 'stacks': [], 'panicFadeTime': self.panic_fade_time}
 
         for stack in self.cue_stacks:
             d['stacks'].append(stack.store(self.root))
