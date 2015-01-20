@@ -24,6 +24,8 @@ def FADE_LINEAR(initial_vol, target_vol, start, duration, now, user_args):
     # Linear fade curve (Y = (M * (X - X_1))/Y_1)
     return (((target_vol - initial_vol) / duration) * (now - start)) + initial_vol, now < start + duration
 
+# TODO: Cubic and Bezier Fade Curves
+
 
 class PlaybackController(GObject.Object):
 
@@ -59,7 +61,8 @@ class PlaybackController(GObject.Object):
         self.__playbin.set_property('uri', self.__source)
 
         self.__pipeline.add(self.__playbin)
-        # self.__pipeline.get_clock().get_time()
+
+        # Schedule a tick on 10ms interval
         self.__clock_id = self.__pipeline.get_clock().new_periodic_id(0, 100000000)
         Gst.Clock.id_wait_async(self.__clock_id, self.tick, None)
         self.__last_update_time = 0
@@ -81,12 +84,8 @@ class PlaybackController(GObject.Object):
         logger.debug("Playback Controller play")
 
         if fade > 0:
-            self.__fade_start_time = -1
-            self.__fade_duration = fade
-            self.__fade_start_vol = 0.0
             self.__playbin.set_property('volume', 0.0)
-            self.__fade_complete_func = None
-            self.__fading = True
+            self.fade_to(volume, fade)
         else:
             self.__playbin.set_property('volume', volume)
             self.__fade_target_volume = volume
@@ -95,29 +94,25 @@ class PlaybackController(GObject.Object):
 
     def pause(self, fade=0):
         logger.debug("Playback Controller Pause")
-
         if fade > 0:
-            self.__fade_start_time = -1
-            self.__fade_duration = fade
-            self.__fade_start_vol = self.__playbin.get_property('volume')
-            self.__fade_target_volume = 0.0
-            self.__fade_complete_func = lambda: self.__pipeline.set_state(Gst.State.PAUSED)
-            self.__fading = True
+            self.fade_to(0.0, fade, lambda *x: self.__pipeline.set_state(Gst.State.PAUSED))
         else:
             self.__pipeline.set_state(Gst.State.PAUSED)
 
     def stop(self, fade=0):
         logger.debug("Playback Controller Stop Initiated (fade={0})".format(fade))
+        self.fade_to(0.0, fade, self.__stop) if fade > 0 else self.__stop()
 
-        if fade > 0:
-            self.__fade_start_time = -1
-            self.__fade_duration = fade
-            self.__fade_start_vol = self.__playbin.get_property('volume')
-            self.__fade_target_volume = 0.0
-            self.__fade_complete_func = self.__stop
-            self.__fading = True
-        else:
-            self.__stop()
+    def fade_to(self, target_volume, duration, callback=None):
+        self.__fade_start_time = -1
+        self.__fade_duration = duration
+        self.__fade_start_vol = self.get_volume()
+        self.__fade_target_volume = target_volume
+        self.__fade_complete_func = callback
+        self.__fading = True
+
+    def get_volume(self):
+        return self.__playbin.get_property('volume')
 
     def __stop(self):
         logger.debug("Playback stopped")

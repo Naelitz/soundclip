@@ -42,7 +42,9 @@ class SCCueListModel(Gtk.TreeStore):
             self.row_deleted(Gtk.TreePath.new_from_indices((index,)))
 
     def get_cue_at(self, path):
-        return self.__cue_list[path.get_indices()[0]]
+        index = path.get_indices()[0]
+        logger.debug("Getting cue at index (len={0}, indicies={1})".format(len(self.__cue_list), path.get_indices()))
+        return self.__cue_list[index]
 
     def do_get_flags(self):
         return Gtk.TreeModelFlags.ITERS_PERSIST
@@ -153,6 +155,7 @@ class SCCueListMenu(Gtk.Popover):
         self.__focused_cue = None
 
         self.__box = Gtk.Box()
+        self.add(self.__box)
 
     def popover_cue(self, cue, x, y):
         r = cairo.RectangleInt()
@@ -163,19 +166,67 @@ class SCCueListMenu(Gtk.Popover):
         self.set_pointing_to(r)
         self.set_position(Gtk.PositionType.BOTTOM)
         self.__focused_cue = cue
+        logger.debug("Popping over [{0:g}]{1}".format(self.__focused_cue.number, self.__focused_cue.name))
 
         self.remove(self.__box)
         self.__box = Gtk.Box()
-        if self.__focused_cue.state is PlaybackState.PAUSED or self.__focused_cue.state is PlaybackState.PLAYING:
-            pass
-        else:
-            pass
+        self.__box.set_orientation(Gtk.Orientation.HORIZONTAL)
+        state = self.__focused_cue.state
+        if state is PlaybackState.PAUSED or state is PlaybackState.PLAYING:
+            if state is PlaybackState.PAUSED:
+                play_button = Gtk.Button.new_with_label("Resume")
+                play_button.connect('clicked', self.on_play)
+                self.__box.add(play_button)
+            else:
+                pause_button = Gtk.Button.new_with_label("Pause")
+                pause_button.connect('clicked', self.on_pause)
+                self.__box.add(pause_button)
 
-        logger.debug("Popping over [{0:g}]{1}".format(self.__focused_cue.number, self.__focused_cue.name))
+                fade_button = Gtk.Button.new_with_label("Fade Out")
+                fade_button.connect('clicked', self.on_fade)
+                self.__box.add(fade_button)
+
+            stop_button = Gtk.Button.new_with_label("Stop")
+            stop_button.connect('clicked', self.on_stop)
+            self.__box.add(stop_button)
+        else:
+            edit_button = Gtk.Button.new_with_label("Edit")
+            edit_button.connect('clicked', self.on_edit)
+            self.__box.add(edit_button)
+
+            delete_button = Gtk.Button.new_with_label("Delete")
+            delete_button.connect('clicked', self.on_delete)
+            self.__box.add(delete_button)
+
+        self.add(self.__box)
+
+        # logger.debug("Popping over [{0:g}]{1}".format(self.__focused_cue.number, self.__focused_cue.name))
+        self.set_visible(True) # What? Why is this needed??
         self.show_all()
 
-    def on_edit(self):
+    def on_play(self, button):
+        self.__focused_cue.play()
+        self.hide()
+
+    def on_pause(self, button):
+        self.__focused_cue.pause()
+        self.hide()
+
+    def on_fade(self, button):
+        self.__focused_cue.stop(fade=5000)
+        self.hide()
+
+    def on_stop(self, button):
+        self.__focused_cue.stop(fade=0)
+        self.hide()
+
+    def on_edit(self, button):
         logger.debug("TODO: Edit cue [{0:g}]{1}".format(self.__focused_cue.number, self.__focused_cue.name))
+        self.hide()
+
+    def on_delete(self, button):
+        logger.debug("TODO: Delete Cue [{0:g}]{1}".format(self.__focused_cue.number, self.__focused_cue.name))
+        self.hide()
 
 
 class SCCueList(Gtk.ScrolledWindow):
@@ -187,6 +238,7 @@ class SCCueList(Gtk.ScrolledWindow):
 
     def __init__(self, w, cue_list, **properties):
         super().__init__(**properties)
+
         self.__main_window = w
         self.__cue_list = cue_list
         self.__tree_view = Gtk.TreeView()
@@ -279,13 +331,19 @@ class SCCueList(Gtk.ScrolledWindow):
             return
         x, y = int(event.x), int(event.y)
         path = self.__tree_view.get_path_at_pos(x, y)
-        cue = self.__cue_list[path[0].get_indices()[0]]
-        if event.button is Gdk.BUTTON_SECONDARY:
-            self.__popover.popover_cue(cue, x, y)
-        elif event.button is Gdk.BUTTON_PRIMARY and event.type == Gdk.EventType.DOUBLE_BUTTON_PRESS:
-            dialog = SCCueDialog(self.__main_window, cue)
-            dialog.run()
-            dialog.destroy()
+        if path:
+            cue = self.__model.get_cue_at(path[0])
+            if cue is not None:
+                if event.button is Gdk.BUTTON_SECONDARY:
+                    self.__popover.popover_cue(cue, x, y)
+                elif event.button is Gdk.BUTTON_PRIMARY and event.type == Gdk.EventType.DOUBLE_BUTTON_PRESS:
+                    dialog = SCCueDialog(self.__main_window, cue)
+                    dialog.run()
+                    dialog.destroy()
+            else:
+                logger.debug("Queried cue was None (Path index was {0})".format(path[0].get_indices()[0]))
+        else:
+            logger.debug("Queried path was None")
 
     def on_key(self, view, event):
         if event.keyval is Gdk.KEY_space:

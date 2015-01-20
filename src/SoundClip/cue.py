@@ -246,6 +246,11 @@ class AudioCue(Cue):
         super().stop(fade)
         self.__pbc.stop(fade)
 
+    @GObject.property
+    def state(self):
+        return PlaybackState.PLAYING if self.__pbc.playing else \
+            PlaybackState.PAUSED if self.__pbc.paused else PlaybackState.STOPPED
+
     def load(self, root, key, j):
         super().load(root, key, j)
 

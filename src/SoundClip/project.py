@@ -110,8 +110,9 @@ class Project(GObject.GObject):
 
         self.emit('stack-changed', key, StackChangeAction.UPDATE if 0 <= key < i else StackChangeAction.INSERT)
 
-    def __getitem__(self, item):
-        return self.cue_stacks[item]
+    def __getitem__(self, key):
+        logger.debug("Asked for cuelist in slot {0}".format(key))
+        return self.cue_stacks[key]
 
     def __len__(self):
         return len(self.cue_stacks)
