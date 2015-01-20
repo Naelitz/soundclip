@@ -3,17 +3,17 @@
 <head>
   <meta charset="utf-8">
   
-  <title>Introducing SoundClip | SoundClip</title>
+  <title>Let There Be Sound | SoundClip</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-  <meta name="description" content="I’ve been frustrated by the lack of good cue management software for theatrical productions. The only real players that I know of are QLab and Multiplay. With QLab, you have to have a mac (which I nei">
+  <meta name="description" content="SoundClip master now has the ability to play and fade out audio cues. However, it is currently limited to doing so at a fixed volume (and fixed fade-out times) until the audio pipeline gets redisigned">
 <meta property="og:type" content="article">
-<meta property="og:title" content="Introducing SoundClip">
-<meta property="og:url" content="https://techwiz24.github.io/soundclip/soundclip/2015/01/01/Introducing-SoundClip/">
+<meta property="og:title" content="Let There Be Sound">
+<meta property="og:url" content="https://techwiz24.github.io/soundclip/soundclip/2015/01/20/Let-There-Be-Sound/">
 <meta property="og:site_name" content="SoundClip">
-<meta property="og:description" content="I’ve been frustrated by the lack of good cue management software for theatrical productions. The only real players that I know of are QLab and Multiplay. With QLab, you have to have a mac (which I nei">
+<meta property="og:description" content="SoundClip master now has the ability to play and fade out audio cues. However, it is currently limited to doing so at a fixed volume (and fixed fade-out times) until the audio pipeline gets redisigned">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="Introducing SoundClip">
-<meta name="twitter:description" content="I’ve been frustrated by the lack of good cue management software for theatrical productions. The only real players that I know of are QLab and Multiplay. With QLab, you have to have a mac (which I nei">
+<meta name="twitter:title" content="Let There Be Sound">
+<meta name="twitter:description" content="SoundClip master now has the ability to play and fade out audio cues. However, it is currently limited to doing so at a fixed volume (and fixed fade-out times) until the audio pipeline gets redisigned">
 
   
     <link rel="alternative" href="/atom.xml" title="SoundClip" type="application/atom+xml">
@@ -65,10 +65,10 @@
   </div>
 </header>
       <div class="outer">
-        <section id="main"><article id="post-Introducing-SoundClip" class="article article-type-post" itemscope itemprop="blogPost">
+        <section id="main"><article id="post-Let-There-Be-Sound" class="article article-type-post" itemscope itemprop="blogPost">
   <div class="article-meta">
-    <a href="/soundclip/2015/01/01/Introducing-SoundClip/" class="article-date">
-  <time datetime="2015-01-02T02:35:14.000Z" itemprop="datePublished">Jan 1 2015</time>
+    <a href="/soundclip/2015/01/20/Let-There-Be-Sound/" class="article-date">
+  <time datetime="2015-01-20T11:52:26.000Z" itemprop="datePublished">Jan 20 2015</time>
 </a>
     
   </div>
@@ -79,7 +79,7 @@
         
   
     <h1 class="article-title" itemprop="name">
-      Introducing SoundClip
+      Let There Be Sound
     </h1>
   
 
@@ -87,16 +87,14 @@
     
     <div class="article-entry" itemprop="articleBody">
       
-        <p>I’ve been frustrated by the lack of good cue management software for theatrical productions. The only real players that I know of are <a href="http://figure53.com/qlab/" target="_blank" rel="external">QLab</a> and <a href="http://www.da-share.com/software/multiplay/" target="_blank" rel="external">Multiplay</a>. With QLab, you have to have a mac (which I neither have nor want), which can be an expensive investment for a small school or community theater. Multiplay works well enough on windows, but doesn’t feel polished, and can’t play any audio under <code>WINE</code>.</p>
-<a id="more"></a>
-
-<p>That is why I’m starting a new project. Introducing <code>SoundClip</code>, an Open Source audio cue playback system written in <code>python3</code>, using <code>GTK+3</code> and <code>gstreamer</code>. I hope to have an initial working verson done in time for a production I will be working on in the spring, but after that, I’d really like to flesh out the project more. Currently, I’m finishing up the project file format and the interface.</p>
-<p>Over the next few days, I’ll add some goals and planned features, but it’s late, and I have to go to work tomorrow.</p>
+        <p>SoundClip <code>master</code> now has the ability to play and fade out audio cues. However, it is currently limited to doing so at a fixed volume (and fixed fade-out times) until the audio pipeline gets redisigned (seriously, who thought it was a good idea to adjust the <strong>SYSTEM</strong> volume when changing the volume on a playbin??? I almost blew my speakers on that one…)</p>
+<p>I have also started implementing context menues for cues depending on if they are stopped or playing/paused.</p>
+<p>Up Next: Finalize the audio pipeline for this version and figure out how to get the tree view to live update with the playback progress.</p>
 
       
     </div>
     <footer class="article-footer">
-      <a data-url="https://techwiz24.github.io/soundclip/2015/01/01/Introducing-SoundClip/" data-id="jgfnupks5355rp6x" class="article-share-link">Share</a>
+      <a data-url="https://techwiz24.github.io/soundclip/2015/01/20/Let-There-Be-Sound/" data-id="fnb3x4xrug8fnl23" class="article-share-link">Share</a>
       
       
     </footer>
@@ -105,15 +103,11 @@
     
 <nav id="article-nav">
   
-    <a href="/soundclip/2015/01/02/Lets-Talk-Roadmaps/" id="article-nav-newer" class="article-nav-link-wrap">
-      <strong class="article-nav-caption">Newer</strong>
-      <div class="article-nav-title">
-        
-          Lets Talk Roadmaps
-        
-      </div>
-    </a>
   
+    <a href="/soundclip/2015/01/15/Lists-and-Dialogs/" id="article-nav-older" class="article-nav-link-wrap">
+      <strong class="article-nav-caption">Older</strong>
+      <div class="article-nav-title">Lists and Dialogs</div>
+    </a>
   
 </nav>
 
