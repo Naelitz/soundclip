@@ -31,6 +31,7 @@ class PlaybackController(GObject.Object):
 
     __gsignals__ = {
         'playback-state-changed': (GObject.SIGNAL_RUN_FIRST, None, (GObject.TYPE_PYOBJECT, )),
+        'tick': (GObject.SIGNAL_RUN_FIRST, None, ())
     }
 
     def __init__(self, source, target_volume=1.0, **properties):
@@ -62,8 +63,9 @@ class PlaybackController(GObject.Object):
 
         self.__pipeline.add(self.__playbin)
 
-        # Schedule a tick on 10ms interval
-        self.__clock_id = self.__pipeline.get_clock().new_periodic_id(0, 100000000)
+        # Schedule a tick on 50ms interval
+        # TODO: Schedule callbacks on a different thread so python doesn't bomb out if we decrease the update interval
+        self.__clock_id = self.__pipeline.get_clock().new_periodic_id(0, 500000000)
         Gst.Clock.id_wait_async(self.__clock_id, self.tick, None)
         self.__last_update_time = 0
 
@@ -127,10 +129,10 @@ class PlaybackController(GObject.Object):
         logger.error("GStreamer playback error: {0}".format(message.parse_error()))
 
     def get_position(self):
-        return int(self.__pipeline.query_position(Gst.Format.TIME)[0] / Gst.MSECOND)
+        return int(self.__pipeline.query_position(Gst.Format.TIME)[1] / Gst.MSECOND)
 
     def get_duration(self):
-        return int(self.__pipeline.query_duration(Gst.Format.TIME)[0] / Gst.MSECOND)
+        return int(self.__pipeline.query_duration(Gst.Format.TIME)[1] / Gst.MSECOND)
 
     @property
     def playing(self):
@@ -145,39 +147,42 @@ class PlaybackController(GObject.Object):
         return not self.playing and not self.paused
 
     def tick(self, clock, time, id, user_data):
-        if self.__fading:
-            # Adjust volume according to fade curve
-            if self.__fade_start_time == -1:
-                self.__fade_start_time = time
+        if self.playing or self.paused:
 
-            v, cont = self.__fade_func(self.__fade_start_vol, self.__fade_target_volume,
-                                       int(self.__fade_start_time), int(self.__fade_duration * Gst.MSECOND),
-                                       time, self.__fade_func_args) \
-                if callable(self.__fade_func) else self.__fade_target_volume
+            if self.__fading:
+                # Adjust volume according to fade curve
+                if self.__fade_start_time == -1:
+                    self.__fade_start_time = time
 
-            # Clamp result
-            if self.__fade_start_vol < self.__fade_target_volume <= v:
-                logger.debug("CLAMPING: Higher than target volume")
-                v = self.__fade_target_volume
-                self.__fading = False
-            elif self.__fade_start_time > self.__fade_target_volume >= v:
-                logger.debug("CLAMPING: Lower than target volume")
-                v = self.__fade_target_volume
-                self.__fading = False
-            elif not cont:
-                logger.debug("CLAMPING: Fade Function asked to stop")
-                v = self.__fade_target_volume
-                self.__fading = False
+                v, cont = self.__fade_func(self.__fade_start_vol, self.__fade_target_volume,
+                                           int(self.__fade_start_time), int(self.__fade_duration * Gst.MSECOND),
+                                           time, self.__fade_func_args) \
+                    if callable(self.__fade_func) else self.__fade_target_volume
 
-            if v > 0.1:
-                self.__fading = False
-                v = 0.1
-                logger.warning("SPEAKER PROTECTION: Something's wrong with the fade curve")
+                # Clamp result
+                if self.__fade_start_vol < self.__fade_target_volume <= v:
+                    logger.debug("CLAMPING: Higher than target volume")
+                    v = self.__fade_target_volume
+                    self.__fading = False
+                elif self.__fade_start_time > self.__fade_target_volume >= v:
+                    logger.debug("CLAMPING: Lower than target volume")
+                    v = self.__fade_target_volume
+                    self.__fading = False
+                elif not cont:
+                    logger.debug("CLAMPING: Fade Function asked to stop")
+                    v = self.__fade_target_volume
+                    self.__fading = False
 
-            # Apply Volume Change
-            self.__playbin.set_property('volume', v)
+                if v > 0.1:
+                    self.__fading = False
+                    v = 0.1
+                    logger.warning("SPEAKER PROTECTION: Something's wrong with the fade curve")
 
-            # If we're done fading, run callback
-            if not self.__fading and callable(self.__fade_complete_func):
-                self.__fade_complete_func()
+                # Apply Volume Change
+                self.__playbin.set_property('volume', v)
+
+                # If we're done fading, run callback
+                if not self.__fading and callable(self.__fade_complete_func):
+                    self.__fade_complete_func()
+            self.emit('tick')
         self.__last_update_time = time

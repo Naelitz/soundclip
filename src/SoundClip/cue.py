@@ -50,6 +50,10 @@ class Cue(GObject.GObject):
     TODO: Abstract class? Clamping? Automation.
     """
 
+    __gsignals__ = {
+        'update': (GObject.SIGNAL_RUN_FIRST, None, ())
+    }
+
     name = GObject.Property(type=str)
     description = GObject.Property(type=str)
     notes = GObject.Property(type=str)
@@ -197,8 +201,12 @@ class AudioCue(Cue):
         self.gain = gain
         self.fade_in_time = fade_in_time
         self.fade_out_time = fade_out_time
-
-        self.__pbc = PlaybackController("file://" + os.path.abspath(os.path.join(project.root, self.__src)))
+        if os.path.isfile(os.path.abspath(os.path.join(project.root, self.__src))):
+            self.__pbc = PlaybackController("file://" + os.path.abspath(os.path.join(project.root, self.__src)))
+            self.__pbc.preroll()
+            self.__pbc.connect('tick', lambda *x: self.emit('update'))
+        else:
+            self.__pbc = None
 
     @property
     def audio_source_uri(self):
@@ -207,14 +215,19 @@ class AudioCue(Cue):
     def change_source(self, src):
         self.__src = src
         logger.debug("Audio source changed for {0} to {1}, changing playback controller".format(self.name, src))
-        if self.__pbc.playing:
+        if self.__pbc is not None and self.__pbc.playing:
             self.__pbc.stop()
         self.__pbc = PlaybackController("file://" + os.path.abspath(os.path.join(self.__project.root, src)))
+        self.__pbc.connect('tick', lambda *x: self.emit('update'))
         self.__pbc.preroll()
 
     @GObject.Property
     def duration(self):
         return self.__pbc.get_duration()
+
+    @GObject.property
+    def elapsed(self):
+        return self.__pbc.get_position()
 
     def get_editor(self):
         return SCAudioCueEditorWidget(self, self.__project.root)
@@ -231,9 +244,11 @@ class AudioCue(Cue):
     def go(self):
         super().go()
         self.play()
+        self.emit('update')
 
     def play(self, fade=0):
         self.__pbc.play(fade=fade)
+        self.emit('update')
 
         # TODO: Prewait / Postwait timers
         # TODO: Register timer to update progress bars
@@ -241,10 +256,12 @@ class AudioCue(Cue):
     def pause(self, fade=0):
         super().pause()
         self.__pbc.pause(fade=fade)
+        self.emit('update')
 
     def stop(self, fade=0):
         super().stop(fade)
         self.__pbc.stop(fade)
+        self.emit('update')
 
     @GObject.property
     def state(self):
@@ -442,6 +459,9 @@ class CueStack(GObject.GObject):
 
         self.__cues = [] if cues is None else cues
 
+        for cue in self.__cues:
+            cue.connect('update', lambda *x: self.emit('changed', self.__cues.index(cue), CueStackChangeType.UPDATE))
+
     def __len__(self):
         return len(self.__cues)
 
@@ -456,6 +476,7 @@ class CueStack(GObject.GObject):
         self.__cues[key] = value
 
         self.emit('changed', key, CueStackChangeType.UPDATE if 0 <= key < l else CueStackChangeType.INSERT)
+        value.connect('update', lambda *x: self.emit('changed', key, CueStackChangeType.UPDATE))
 
     def __iter__(self):
         return self.__cues.__iter__()
@@ -472,6 +493,7 @@ class CueStack(GObject.GObject):
 
         self.__cues.append(other)
         self.emit('changed', len(self.__cues)-1, CueStackChangeType.INSERT)
+        other.connect('update', lambda *x: self.emit('changed', self.__cues.index(other), CueStackChangeType.UPDATE))
         return self
 
     def __isub__(self, other):
@@ -488,7 +510,8 @@ class CueStack(GObject.GObject):
 
     def add_cue_relative_to(self, existing, cue):
         self.__cues.insert(self.index(existing)+1, cue)
-        self.emit('changed', self.index(existing)+1, CueStackChangeType.DELETE)
+        self.emit('changed', self.index(existing)+1, CueStackChangeType.INSERT)
+        cue.connect('changed', self.index(cue), CueStackChangeType.UPDATE)
 
     @staticmethod
     def load(root, key, project):

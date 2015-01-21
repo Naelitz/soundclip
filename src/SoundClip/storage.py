@@ -54,6 +54,9 @@ class IllegalObjectException(StorageException):
     pass
 
 
+# TODO: Object Cache
+
+
 def read(root, key):
     """
     Reads an object from the database, returning its json content. Like git, objects are keyed by the sha1 hash of their
