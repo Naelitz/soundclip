@@ -12,6 +12,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import hashlib
+import datetime
 from gi.repository import Gtk
 
 
@@ -19,7 +20,7 @@ def timefmt(ms):
     ss, ms = divmod(ms, 1000)
     mm, ss = divmod(ss, 60)
     hh, mm = divmod(mm, 60)
-    return "{:02d}:{:02d}:{:.2f}".format(hh, mm, ss + ms/1000)
+    return "{:02d}:{:05.2f}".format(mm, ss + ms/1000)
 
 
 def sha(s: str):
@@ -28,3 +29,8 @@ def sha(s: str):
 
 def get_gtk_version():
     return str(Gtk.get_major_version()) + "." + str(Gtk.get_minor_version()) + "." + str(Gtk.get_micro_version())
+
+
+def now():
+    t = datetime.datetime.now()
+    return (t.day * 24 * 60 * 60 + t.second) * 1000 + t.microsecond / 1000.0

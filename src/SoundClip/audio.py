@@ -12,12 +12,14 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import gi
+from SoundClip.util import now
+
 gi.require_version('Gst', '1.0')
 
 import logging
 logger = logging.getLogger('SoundClip')
 
-from gi.repository import GObject, Gst
+from gi.repository import GLib, GObject, Gst
 
 
 def fade_curve_linear(initial_vol, target_vol, start, duration, now, user_args):
@@ -28,6 +30,11 @@ def fade_curve_linear(initial_vol, target_vol, start, duration, now, user_args):
 
 
 class PlaybackController(GObject.Object):
+    """
+    Playback Controller for Audio Cues. Serves as a bridge between the cue and gstreamer.
+
+    uridecodebin -> audioconvert -> volume -> autoaudiosink
+    """
 
     __gsignals__ = {
         'playback-state-changed': (GObject.SIGNAL_RUN_FIRST, None, (GObject.TYPE_PYOBJECT, )),
@@ -56,22 +63,37 @@ class PlaybackController(GObject.Object):
         self.__bus.connect('message::eos', self.on_eos)
         self.__bus.connect('message::error', self.on_error)
 
-        self.__playbin = Gst.ElementFactory.make('playbin', None)
-        fs = Gst.ElementFactory.make('fakesink', None)
-        self.__playbin.set_property('video-sink', fs)
-        self.__playbin.set_property('uri', self.__source)
+        self.__dec = Gst.ElementFactory.make('uridecodebin', None)
+        self.__dec.set_property('uri', self.__source)
+        self.__dec.connect('pad-added', self.__on_decoded_pad)
+        self.__dec.connect('drained', lambda *x: GLib.idle_add(self.on_drained))
+        self.__conv = Gst.ElementFactory.make('audioconvert', None)
+        self.__conv_sink = self.__conv.get_static_pad('sink')
+        self.__vol = Gst.ElementFactory.make('volume', None)
+        self.__sink = Gst.ElementFactory.make('autoaudiosink', None)
 
-        self.__pipeline.add(self.__playbin)
+        self.__pipeline.add(self.__dec)
+        self.__pipeline.add(self.__conv)
+        self.__pipeline.add(self.__vol)
+        self.__pipeline.add(self.__sink)
 
-        # Schedule a tick on 10ms interval
-        # TODO: Do we want the fade function on a GLib.timeout_add or the gstreamer clocks?
-        self.__clock_id = self.__pipeline.get_clock().new_periodic_id(0, 10 * Gst.MSECOND)
-        Gst.Clock.id_wait_async(self.__clock_id, self.tick, None)
+        self.__conv.link(self.__vol)
+        self.__vol.link(self.__sink)
+
+        # Schedule a tick on 50ms interval
+        self.__active = True
+        GLib.timeout_add(50, self.tick)
         self.__last_update_time = 0
 
     def __del__(self):
         self.__pipeline.set_state(Gst.State.NULL)
-        Gst.Clock.id_unschedule(self.__clock_id)
+        self.__active = False
+
+    def __on_decoded_pad(self, element, pad):
+        name = pad.query_caps(None).to_string()
+        if name.startswith("audio/") and not self.__conv_sink.is_linked():
+            print("Linking Pad: {0}".format(name))
+            pad.link(self.__conv_sink)
 
     def reset(self):
         logger.debug("Playback Controller Reset")
@@ -82,14 +104,14 @@ class PlaybackController(GObject.Object):
         logger.debug("Playback Controller preroll")
         self.__pipeline.set_state(Gst.State.PAUSED)
 
-    def play(self, volume=0.1, fade=0):
+    def play(self, volume=1.0, fade=0):
         logger.debug("Playback Controller play")
 
         if fade > 0:
-            self.__playbin.set_property('volume', 0.0)
+            self.__vol.set_property('volume', 0.0)
             self.fade_to(volume, fade)
         else:
-            self.__playbin.set_property('volume', volume)
+            self.__vol.set_property('volume', volume)
             self.__fade_target_volume = volume
 
         self.__pipeline.set_state(Gst.State.PLAYING)
@@ -108,13 +130,24 @@ class PlaybackController(GObject.Object):
     def fade_to(self, target_volume, duration, callback=None):
         self.__fade_start_time = -1
         self.__fade_duration = duration
-        self.__fade_start_vol = self.get_volume()
+        self.__fade_start_vol = self.volume
         self.__fade_target_volume = target_volume
         self.__fade_complete_func = callback
+
+        logger.debug("Asked to fade from {0:.2f} to {1:.2f} over {2}ms".format(
+            self.__fade_start_vol, target_volume, duration
+        ))
         self.__fading = True
 
-    def get_volume(self):
-        return self.__playbin.get_property('volume')
+    @property
+    def volume(self):
+        return self.__vol.get_property('volume')
+
+    def set_volume(self, target, fade=0):
+        if fade > 0:
+            self.fade_to(target, fade, None)
+        else:
+            self.__vol.set_property('volume', target)
 
     def __stop(self):
         logger.debug("Playback stopped")
@@ -124,6 +157,11 @@ class PlaybackController(GObject.Object):
     def on_eos(self, bus, message):
         logger.info("Playback Finished [EOS] for {0}".format(self.__source))
         self.reset()
+
+    def on_drained(self):
+        logger.debug("URIDecodeBin Drained")
+        self.on_eos(None, None)
+        return False
 
     def on_error(self, bus, message):
         logger.error("GStreamer playback error: {0}".format(message.parse_error()))
@@ -159,25 +197,28 @@ class PlaybackController(GObject.Object):
     def stopped(self):
         return not self.playing and not self.paused
 
-    def tick(self, clock, time, clock_id, user_data):
+    def tick(self):
         if self.playing or self.paused:
-
             if self.__fading:
                 # Adjust volume according to fade curve
                 if self.__fade_start_time == -1:
-                    self.__fade_start_time = time
+                    self.__fade_start_time = now()
+
+                current_time = now()
 
                 v, cont = self.__fade_func(self.__fade_start_vol, self.__fade_target_volume,
-                                           int(self.__fade_start_time), int(self.__fade_duration * Gst.MSECOND),
-                                           time, self.__fade_func_args) \
+                                           int(self.__fade_start_time), int(self.__fade_duration),
+                                           current_time, self.__fade_func_args) \
                     if callable(self.__fade_func) else self.__fade_target_volume
+
+                logger.debug("Fade Curve returned target volume {0}. Continuing: {1}".format(v, cont))
 
                 # Clamp result
                 if self.__fade_start_vol < self.__fade_target_volume <= v:
                     logger.debug("CLAMPING: Higher than target volume")
                     v = self.__fade_target_volume
                     self.__fading = False
-                elif self.__fade_start_time > self.__fade_target_volume >= v:
+                elif self.__fade_start_vol > self.__fade_target_volume >= v:
                     logger.debug("CLAMPING: Lower than target volume")
                     v = self.__fade_target_volume
                     self.__fading = False
@@ -186,16 +227,12 @@ class PlaybackController(GObject.Object):
                     v = self.__fade_target_volume
                     self.__fading = False
 
-                if v > 0.1:
-                    self.__fading = False
-                    v = 0.1
-                    logger.warning("SPEAKER PROTECTION: Something's wrong with the fade curve")
-
                 # Apply Volume Change
-                self.__playbin.set_property('volume', v)
+                self.__vol.set_property('volume', v)
 
                 # If we're done fading, run callback
                 if not self.__fading and callable(self.__fade_complete_func):
                     self.__fade_complete_func()
             self.emit('tick')
-        self.__last_update_time = time
+        self.__last_update_time = now()
+        return self.__active
