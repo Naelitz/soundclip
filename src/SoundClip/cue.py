@@ -18,7 +18,7 @@ from SoundClip.audio import PlaybackController
 logger = logging.getLogger('SoundClip')
 
 from enum import Enum
-from gi.repository import GObject, Gtk
+from gi.repository import GLib, GObject, Gtk
 
 from SoundClip import storage
 from SoundClip.exception import SCException
@@ -187,6 +187,8 @@ class AudioCue(Cue):
     fade_in_time = GObject.Property(type=GObject.TYPE_LONG, default=0)
     fade_out_time = GObject.Property(type=GObject.TYPE_LONG, default=0)
 
+    __PROGRESS_UPDATE_INTERVAL__ = 100
+
     def __init__(self, project, name="Untitled Cue", description="", notes="", number=-1.0, pre_wait=0, post_wait=0,
                  audio_source_uri="", pitch=0, pan=0, gain=0, fade_in_time=0, fade_out_time=0):
         super().__init__(project, name, description, notes, number, pre_wait, post_wait)
@@ -204,7 +206,6 @@ class AudioCue(Cue):
         if os.path.isfile(os.path.abspath(os.path.join(project.root, self.__src))):
             self.__pbc = PlaybackController("file://" + os.path.abspath(os.path.join(project.root, self.__src)))
             self.__pbc.preroll()
-            self.__pbc.connect('tick', lambda *x: self.emit('update'))
         else:
             self.__pbc = None
 
@@ -212,13 +213,16 @@ class AudioCue(Cue):
     def audio_source_uri(self):
         return self.__src
 
+    def __update_func(self):
+        self.emit('update')
+        return self.__pbc.playing
+
     def change_source(self, src):
         self.__src = src
         logger.debug("Audio source changed for {0} to {1}, changing playback controller".format(self.name, src))
         if self.__pbc is not None and self.__pbc.playing:
             self.__pbc.stop()
         self.__pbc = PlaybackController("file://" + os.path.abspath(os.path.join(self.__project.root, src)))
-        self.__pbc.connect('tick', lambda *x: self.emit('update'))
         self.__pbc.preroll()
 
     @GObject.Property
@@ -249,6 +253,7 @@ class AudioCue(Cue):
     def play(self, fade=0):
         self.__pbc.play(fade=fade)
         self.emit('update')
+        GLib.timeout_add(AudioCue.__PROGRESS_UPDATE_INTERVAL__, self.__update_func)
 
         # TODO: Prewait / Postwait timers
         # TODO: Register timer to update progress bars

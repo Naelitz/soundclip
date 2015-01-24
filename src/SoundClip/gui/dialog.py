@@ -158,7 +158,6 @@ class SCCueDialog(Gtk.Dialog):
         grid.set_vexpand(True)
         grid.set_valign(Gtk.Align.FILL)
 
-        # TODO: Common Cue Editor
         name_label = Gtk.Label("Name")
         name_label.set_halign(Gtk.Align.END)
         grid.attach(name_label, 0, 0, 1, 1)

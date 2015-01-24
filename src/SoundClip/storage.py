@@ -54,19 +54,22 @@ class IllegalObjectException(StorageException):
     pass
 
 
-# TODO: Object Cache
+__CACHE = {}
 
 
-def read(root, key):
+def read(root, key, force_reload=False):
     """
     Reads an object from the database, returning its json content. Like git, objects are keyed by the sha1 hash of their
     content. The first two bytes of the hash refer to the sub directory of the objects store, the remaining 40 bytes
     are the name of the file.
 
     :param root: The project root directory
-    :param checksum: The checksum of the object to read
+    :param key: The checksum of the object to read
     :return: the json content of the specified object
     """
+    if key in __CACHE and not force_reload:
+        logger.debug("Loading {0} from cache".format(key))
+        return __CACHE[key]
 
     path = os.path.join(root, '.soundclip', 'objects', key[0:2], key[2:40])
     logger.debug("Asked to load {0}, looking for {1}".format(key, path))
@@ -90,7 +93,9 @@ def read(root, key):
             "checksum": checksum
         })
 
-    return json.loads(content)
+    obj = json.loads(content)
+    __CACHE[key] = obj
+    return obj
 
 
 def write(root, d, current_hash):

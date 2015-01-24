@@ -20,7 +20,7 @@ logger = logging.getLogger('SoundClip')
 from gi.repository import GObject, Gst
 
 
-def FADE_LINEAR(initial_vol, target_vol, start, duration, now, user_args):
+def fade_curve_linear(initial_vol, target_vol, start, duration, now, user_args):
     # Linear fade curve (Y = (M * (X - X_1))/Y_1)
     return (((target_vol - initial_vol) / duration) * (now - start)) + initial_vol, now < start + duration
 
@@ -41,7 +41,7 @@ class PlaybackController(GObject.Object):
         self.__source = source
 
         self.__fading = False
-        self.__fade_func = FADE_LINEAR
+        self.__fade_func = fade_curve_linear
         self.__fade_func_args = {}
         self.__fade_start_time = 0
         self.__fade_duration = 0
@@ -63,9 +63,9 @@ class PlaybackController(GObject.Object):
 
         self.__pipeline.add(self.__playbin)
 
-        # Schedule a tick on 50ms interval
-        # TODO: Schedule callbacks on a different thread so python doesn't bomb out if we decrease the update interval
-        self.__clock_id = self.__pipeline.get_clock().new_periodic_id(0, 500000000)
+        # Schedule a tick on 10ms interval
+        # TODO: Do we want the fade function on a GLib.timeout_add or the gstreamer clocks?
+        self.__clock_id = self.__pipeline.get_clock().new_periodic_id(0, 10 * Gst.MSECOND)
         Gst.Clock.id_wait_async(self.__clock_id, self.tick, None)
         self.__last_update_time = 0
 
@@ -134,19 +134,32 @@ class PlaybackController(GObject.Object):
     def get_duration(self):
         return int(self.__pipeline.query_duration(Gst.Format.TIME)[1] / Gst.MSECOND)
 
+    def __pipeline_state(self, timeout=Gst.CLOCK_TIME_NONE):
+        return self.__pipeline.get_state(timeout)
+
+    def is_pipeline_in_state(self, state, default_on_fail=False):
+        ok, pipeline_state, pending = self.__pipeline_state()
+
+        if ok == Gst.StateChangeReturn.ASYNC:
+            return pending == state
+        elif ok == Gst.StateChangeReturn.SUCCESS:
+            return pipeline_state == state
+        else:
+            return default_on_fail
+
     @property
     def playing(self):
-        return Gst.State.PLAYING in self.__pipeline.get_state(Gst.CLOCK_TIME_NONE)
+        return self.is_pipeline_in_state(Gst.State.PLAYING)
 
     @property
     def paused(self):
-        return Gst.State.PAUSED in self.__pipeline.get_state(Gst.CLOCK_TIME_NONE)
+        return self.is_pipeline_in_state(Gst.State.PAUSED)
 
     @property
     def stopped(self):
         return not self.playing and not self.paused
 
-    def tick(self, clock, time, id, user_data):
+    def tick(self, clock, time, clock_id, user_data):
         if self.playing or self.paused:
 
             if self.__fading:
