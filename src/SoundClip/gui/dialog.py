@@ -147,8 +147,9 @@ class SCProjectPropertiesDialog(Gtk.Dialog):
 
 class SCCueDialog(Gtk.Dialog):
     def __init__(self, w, c, **properties):
-        super().__init__("Cue Editor{0}".format(" - {0}".format(c.name) if c else ""), w, 0,
-                         (Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL, Gtk.STOCK_OK, Gtk.ResponseType.OK), **properties)
+        super().__init__("Cue Editor{0}".format(" - {0}".format(c.name) if c is not None else ""), w, 0,
+                         (Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL, Gtk.STOCK_OK, Gtk.ResponseType.OK),
+                         **properties)
 
         self.__main_window = w
         self.__cue = c
