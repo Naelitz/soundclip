@@ -1,10 +1,17 @@
 # SoundClip
 Simple sound cue management for linux (Like [Q-Lab (Mac OS X)](http://figure53.com/qlab/) or [MultiPlay (Windows)](http://www.da-share.com/software/multiplay/))
 
+![](http://techwiz24.github.io/soundclip/2015/01/15/Lists-and-Dialogs/about.png)
+
+## Project Status
+SoundClip is currently under heavy, active development in an attempt to have it reliable enough to be used in a production
+in March. Right now, basic audio playback works, but is **NOT PRODUCTION READY** yet. I try to keep the [dev blog](http://techwiz24.github.io/soundclip)
+up to date, you can get the most recent project status update there.
+
 ## Planned Features
 Below is a list of features I want to add, listed in order of importance
 
-* [ ] Basic Audio Cues [In Progress]
+* [x] Basic Audio Cues
 * [ ] Adjustable Playback Parameters (Pitch / Gain / Fade / EQ / etc.)
 * [ ] Automation Cues
 * [ ] Looping / Holds
@@ -15,8 +22,6 @@ Below is a list of features I want to add, listed in order of importance
 * [ ] Video Cues?
 * [ ] MIDI Cues?
 * [ ] Developer Library / Plugins / Custom Cue support
-
-At some point, I intend to setup a [development blog](https://techwiz24.github.io/soundclip) to track these goals.
 
 ## License
 This program is free software: you can redistribute it and/or modify
