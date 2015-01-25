@@ -80,6 +80,8 @@ class PlaybackController(GObject.Object):
         self.__conv.link(self.__vol)
         self.__vol.link(self.__sink)
 
+        self.__duration = 0
+
         # Schedule a tick on 50ms interval
         self.__active = True
         GLib.timeout_add(50, self.tick)
@@ -103,6 +105,8 @@ class PlaybackController(GObject.Object):
     def preroll(self):
         logger.debug("Playback Controller preroll")
         self.__pipeline.set_state(Gst.State.PAUSED)
+        self.__pipeline.get_state(Gst.CLOCK_TIME_NONE)
+        self.__duration = int(self.__pipeline.query_duration(Gst.Format.TIME)[1] / Gst.MSECOND)
 
     def play(self, volume=1.0, fade=0):
         logger.debug("Playback Controller play")
@@ -170,7 +174,7 @@ class PlaybackController(GObject.Object):
         return int(self.__pipeline.query_position(Gst.Format.TIME)[1] / Gst.MSECOND)
 
     def get_duration(self):
-        return int(self.__pipeline.query_duration(Gst.Format.TIME)[1] / Gst.MSECOND)
+        return self.__duration
 
     def __pipeline_state(self, timeout=Gst.CLOCK_TIME_NONE):
         return self.__pipeline.get_state(timeout)
