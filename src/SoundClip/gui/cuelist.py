@@ -157,9 +157,12 @@ class SCCueListMenu(Gtk.Popover):
     The context menu displayed when a cue is right-clicked
     """
 
-    def __init__(self, view, **properties):
+    def __init__(self, view, w, **properties):
         super().__init__(**properties)
+
         self.__tree_view = view
+        self.__main_window = w
+
         self.set_relative_to(self.__tree_view)
         self.__focused_cue = None
 
@@ -230,12 +233,26 @@ class SCCueListMenu(Gtk.Popover):
         self.hide()
 
     def on_edit(self, button):
-        logger.debug("TODO: Edit cue [{0:g}]{1}".format(self.__focused_cue.number, self.__focused_cue.name))
         self.hide()
+        dialog = SCCueDialog(self.__main_window, self.__focused_cue)
+        dialog.run()
+        dialog.destroy()
 
     def on_delete(self, button):
-        logger.debug("TODO: Delete Cue [{0:g}]{1}".format(self.__focused_cue.number, self.__focused_cue.name))
         self.hide()
+
+        d = Gtk.MessageDialog(self.__main_window, 0, Gtk.MessageType.WARNING, Gtk.ButtonsType.YES_NO,
+                              "Are you sure you want to delete cue [{0:g}]{1}".format(
+                                  self.__focused_cue.number, self.__focused_cue.name
+                              ))
+        d.format_secondary_text("This action cannot be undone")
+        response = d.run()
+
+        if response == Gtk.ResponseType.YES:
+            self.__main_window.project.remove_cue(self.__focused_cue)
+            self.__focused_cue = None
+
+        d.destroy()
 
 
 class SCCueList(Gtk.ScrolledWindow):
@@ -251,7 +268,7 @@ class SCCueList(Gtk.ScrolledWindow):
         self.__main_window = w
         self.__cue_list = cue_list
         self.__tree_view = Gtk.TreeView()
-        self.__popover = SCCueListMenu(self.__tree_view)
+        self.__popover = SCCueListMenu(self.__tree_view, self.__main_window)
 
         self.__title_widget = Gtk.Label(cue_list.name)
         self.__cue_list.connect('renamed', self.on_rename)

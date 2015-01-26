@@ -14,6 +14,7 @@
 import os
 import logging
 from SoundClip.audio import PlaybackController
+from SoundClip.gui.widgets import TimePicker
 
 logger = logging.getLogger('SoundClip')
 
@@ -66,7 +67,7 @@ class Cue(GObject.GObject):
     def __init__(self, project, name="Untitled Cue", description="", notes="", number=-1.0, pre_wait=0, post_wait=0):
         GObject.GObject.__init__(self)
 
-        self.__project = project
+        self._project = project
 
         self.name = name
         self.description = description
@@ -195,8 +196,6 @@ class AudioCue(Cue):
 
         logger.debug("Init Audio Cue")
 
-        self.__project = project
-
         self.__src = audio_source_uri
         self.pitch = pitch
         self.pan = pan
@@ -222,7 +221,7 @@ class AudioCue(Cue):
         logger.debug("Audio source changed for {0} to {1}, changing playback controller".format(self.name, src))
         if self.__pbc is not None and self.__pbc.playing:
             self.__pbc.stop()
-        self.__pbc = PlaybackController("file://" + os.path.abspath(os.path.join(self.__project.root, src)))
+        self.__pbc = PlaybackController("file://" + os.path.abspath(os.path.join(self._project.root, src)))
         self.__pbc.preroll()
 
     @GObject.Property
@@ -234,7 +233,7 @@ class AudioCue(Cue):
         return self.__pbc.get_position()
 
     def get_editor(self):
-        return SCAudioCueEditorWidget(self, self.__project.root)
+        return SCAudioCueEditorWidget(self, self._project.root)
 
     def on_editor_closed(self, w, save=True):
         if save:
@@ -256,7 +255,6 @@ class AudioCue(Cue):
         GLib.timeout_add(AudioCue.__PROGRESS_UPDATE_INTERVAL__, self.__update_func)
 
         # TODO: Prewait / Postwait timers
-        # TODO: Register timer to update progress bars
 
     def pause(self, fade=0):
         super().pause()
@@ -279,7 +277,10 @@ class AudioCue(Cue):
         self.change_source(j['src'] if 'src' in j else "")
 
         if not os.path.exists(os.path.join(root, self.audio_source_uri)):
-            # TODO: Warn about nonexistent audio file source
+            logger.warning("Audio file does not exists in project root!")
+
+            # TODO: Register error with project
+
             pass
 
         self.pitch = float(j['pitch']) if 'pitch' in j else 0.0
@@ -351,20 +352,18 @@ class SCAudioCueEditorWidget(Gtk.Grid):
         fade_in_label = Gtk.Label("Fade In Time:")
         fade_in_label.set_halign(Gtk.Align.END)
         self.attach(fade_in_label, 0, 4, 1, 1)
-        self.__fade_in_time_entry = Gtk.Entry()
-        self.__fade_in_time_entry.set_text(str(cue.fade_in_time))
-        self.__fade_in_time_entry.set_hexpand(True)
-        self.__fade_in_time_entry.set_halign(Gtk.Align.FILL)
-        self.attach(self.__fade_in_time_entry, 1, 4, 2, 1)
+        self.__fade_in_time_picker = TimePicker(cue.fade_in_time)
+        self.__fade_in_time_picker.set_hexpand(True)
+        self.__fade_in_time_picker.set_halign(Gtk.Align.FILL)
+        self.attach(self.__fade_in_time_picker, 1, 4, 2, 1)
 
         fade_out_label = Gtk.Label("Fade Out Time:")
         fade_out_label.set_halign(Gtk.Align.END)
         self.attach(fade_out_label, 0, 5, 1, 1)
-        self.__fade_out_time_entry = Gtk.Entry()
-        self.__fade_out_time_entry.set_text(str(cue.fade_out_time))
-        self.__fade_out_time_entry.set_hexpand(True)
-        self.__fade_out_time_entry.set_halign(Gtk.Align.FILL)
-        self.attach(self.__fade_out_time_entry, 1, 5, 2, 1)
+        self.__fade_out_time_picker = TimePicker(cue.fade_out_time)
+        self.__fade_out_time_picker.set_hexpand(True)
+        self.__fade_out_time_picker.set_halign(Gtk.Align.FILL)
+        self.attach(self.__fade_out_time_picker, 1, 5, 2, 1)
 
     def on_source(self, button):
         dialog = Gtk.FileChooserDialog("Select Audio File",
@@ -401,10 +400,10 @@ class SCAudioCueEditorWidget(Gtk.Grid):
         return self.__gain_scale.get_value()
 
     def get_fade_in_time(self):
-        return self.__fade_in_time_entry.get_text()
+        return self.__fade_in_time_picker.get_total_milliseconds()
 
     def get_fade_out_time(self):
-        return self.__fade_out_time_entry.get_text()
+        return self.__fade_out_time_picker.get_total_milliseconds()
 
 
 class ControlCue(Cue):
@@ -433,7 +432,7 @@ def load_cue(root, key, project):
     if t == 'audio':
         return AudioCue(project=project).load(root, key, j)
     else:
-        # TODO: Unknown Cue Type. Missing plugin?
+        logger.warning("Unknown cue type or missing plugin for type {0}".format(t))
         return Cue(project=project).load(root, key, j)
 
 
@@ -517,6 +516,11 @@ class CueStack(GObject.GObject):
         self.__cues.insert(self.index(existing)+1, cue)
         self.emit('changed', self.index(existing)+1, CueStackChangeType.INSERT)
         cue.connect('changed', self.index(cue), CueStackChangeType.UPDATE)
+
+    def remove_cue(self, cue):
+        i = self.__cues.index(cue)
+        self.__cues.remove(cue)
+        self.emit('changed', i, CueStackChangeType.DELETE)
 
     @staticmethod
     def load(root, key, project):

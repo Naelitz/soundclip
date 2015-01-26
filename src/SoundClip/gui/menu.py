@@ -119,8 +119,11 @@ class SCHeaderBar(Gtk.HeaderBar):
             proj = dialog.get_filename()
             if os.path.isdir(os.path.join(proj, ".soundclip")):
                 logger.error("Project exists!")
-                # TODO: Error, project exists
-                pass
+                d = Gtk.MessageDialog(self.__main_window, 0, Gtk.MessageType.ERROR, Gtk.ButtonsType.OK,
+                                      "Error: Project Exists")
+                d.format_secondary_text("You cannot create a new project in the same directory as an existing one.")
+                d.run()
+                d.destroy()
             else:
                 logger.info("Saving new project to {0}".format(proj))
                 p = Project()

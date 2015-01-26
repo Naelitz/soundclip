@@ -101,6 +101,11 @@ class Project(GObject.GObject):
 
         self.emit('stack-changed', key, StackChangeAction.DELETE)
 
+    def remove_cue(self, cue):
+        for stack in self.cue_stacks:
+            if cue in stack:
+                stack.remove_cue(cue)
+
     def __setitem__(self, key, value):
         if not isinstance(value, CueStack):
             raise TypeError("Cannot add type {0} to CueList".format(type(value)))

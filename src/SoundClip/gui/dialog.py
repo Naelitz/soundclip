@@ -12,6 +12,8 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import logging
+from SoundClip.gui.widgets import TimePicker
+
 logger = logging.getLogger('SoundClip')
 
 import SoundClip
@@ -189,8 +191,7 @@ class SCCueDialog(Gtk.Dialog):
         prew_label = Gtk.Label("Pre-Wait Time")
         prew_label.set_halign(Gtk.Align.END)
         grid.attach(prew_label, 0, 3, 1, 1)
-        self.__prewait = Gtk.Entry()
-        self.__prewait.set_text(str(self.__cue.pre_wait)) # TODO: Time Picker
+        self.__prewait = TimePicker(self.__cue.pre_wait)
         self.__prewait.set_hexpand(True)
         self.__prewait.set_halign(Gtk.Align.FILL)
         grid.attach(self.__prewait, 1, 3, 1, 1)
@@ -198,11 +199,10 @@ class SCCueDialog(Gtk.Dialog):
         postw_label = Gtk.Label("Post-Wait Time")
         postw_label.set_halign(Gtk.Align.END)
         grid.attach(postw_label, 0, 4, 1, 1)
-        self.__postwait = Gtk.Entry()
-        self.__postwait.set_text(str(self.__cue.post_wait))
+        self.__postwait = TimePicker(self.__cue.post_wait)
         self.__postwait.set_hexpand(True)
         self.__postwait.set_halign(Gtk.Align.FILL)
-        grid.attach(self.__postwait, 1, 4, 1, 1) # TODO: Time Picker
+        grid.attach(self.__postwait, 1, 4, 1, 1)
 
         if self.__editor:
             wrapper = Gtk.ScrolledWindow()
@@ -211,6 +211,7 @@ class SCCueDialog(Gtk.Dialog):
             wrapper.set_halign(Gtk.Align.FILL)
             wrapper.set_vexpand(True)
             wrapper.set_valign(Gtk.Align.FILL)
+            wrapper.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
             grid.attach(wrapper, 0, 5, 2, 1)
 
         self.get_content_area().pack_start(grid, True, True, 0)
@@ -236,8 +237,8 @@ class SCCueDialog(Gtk.Dialog):
             self.__cue.name = self.__name.get_text().strip()
             self.__cue.description = self.__description.get_text().strip()
             self.__cue.notes = self.__notes.get_text().strip()
-            self.__cue.pre_wait = float(self.__prewait.get_text())
-            self.__cue.post_wait = float(self.__postwait.get_text())
+            self.__cue.pre_wait = self.__prewait.get_total_milliseconds()
+            self.__cue.post_wait = self.__postwait.get_total_milliseconds()
 
             self.__cue.on_editor_closed(self.__editor, save=True)
         else:

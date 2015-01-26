@@ -16,10 +16,14 @@ import datetime
 from gi.repository import Gtk
 
 
-def timefmt(ms):
+def timepart(ms):
     ss, ms = divmod(ms, 1000)
     mm, ss = divmod(ss, 60)
-    hh, mm = divmod(mm, 60)
+    return mm, ss, ms
+
+
+def timefmt(ms):
+    mm, ss, ms = timepart(ms)
     return "{:02d}:{:05.2f}".format(mm, ss + ms/1000)
 
 
