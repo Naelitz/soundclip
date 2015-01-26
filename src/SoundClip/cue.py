@@ -30,6 +30,10 @@ class MalformedCueException(SCException):
     pass
 
 
+class CircularReferenceException(SCException):
+    pass
+
+
 class PlaybackActionType(Enum):
     PLAY = 0
     PAUSE = 1
@@ -410,6 +414,8 @@ class ControlCue(Cue):
     pass
 GObject.type_register(ControlCue)
 
+__LOAD_STACK = []
+
 
 def load_cue(root, key, project):
     """
@@ -419,6 +425,16 @@ def load_cue(root, key, project):
     :param key: The hash identifier of the cue to load
     :return: The cue identified by the specified hash
     """
+
+    if key in __LOAD_STACK:
+        raise CircularReferenceException({
+            'message': ("The Cue identified by id {0} has already been partially loaded but was referenced again. "
+                        "This is a circular reference").format(key),
+            'key': key
+        })
+
+    __LOAD_STACK.append(key)
+
     j = storage.read(root, key)
     if 'type' not in j:
         raise MalformedCueException({
@@ -430,10 +446,13 @@ def load_cue(root, key, project):
     t = j['type'] if 'type' in j else 'unknown'
     logger.debug("Trying to load {0} which is of type {1}".format(key, t))
     if t == 'audio':
-        return AudioCue(project=project).load(root, key, j)
+        ret = AudioCue(project=project).load(root, key, j)
     else:
         logger.warning("Unknown cue type or missing plugin for type {0}".format(t))
-        return Cue(project=project).load(root, key, j)
+        ret = Cue(project=project).load(root, key, j)
+
+    __LOAD_STACK.pop()
+    return ret
 
 
 class CueStackChangeType(Enum):
