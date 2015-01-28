@@ -15,7 +15,7 @@ import os
 import logging
 logger = logging.getLogger('SoundClip')
 
-from gi.repository import Gtk, Gio
+from gi.repository import Gtk, Gio, GObject
 
 from SoundClip.cue import Cue, CueStack, AudioCue
 from SoundClip.gui.dialog import SCCueDialog, SCProjectPropertiesDialog, SCAboutDialog, SCRenameCueListDialog
@@ -54,7 +54,8 @@ class SCHeaderBar(Gtk.HeaderBar):
 
         self.__add_cue_button = Gtk.MenuButton()
         self.__add_cue_button.add(Gtk.Image.new_from_icon_name("list-add", Gtk.IconSize.SMALL_TOOLBAR))
-        self.__add_cue_model = SCAddCuemenu(self.__main_window)
+        self.__add_cue_model = SCAddCueMenuModel(self.__main_window)
+        self.__add_cue_model.connect('action', lambda *x: self.__add_cue_button.set_active(False))
         self.__add_cue_button.set_menu_model(self.__add_cue_model)
         self.__add_cue_button.insert_action_group('cue', self.__add_cue_model.get_action_group())
         self.__add_cue_button.set_tooltip_text("Add...")
@@ -64,6 +65,7 @@ class SCHeaderBar(Gtk.HeaderBar):
         self.__settings_button = Gtk.MenuButton()
         self.__settings_button.add(Gtk.Image.new_from_icon_name("open-menu-symbolic", Gtk.IconSize.SMALL_TOOLBAR))
         self.__settings_model = SCSettingsMenuModel(self.__main_window)
+        self.__settings_model.connect('action', lambda *x: self.__settings_button.set_active(False))
         self.__settings_button.set_menu_model(self.__settings_model)
         self.__settings_button.insert_action_group('hb', self.__settings_model.get_action_group())
         self.__settings_button.set_tooltip_text("Properties")
@@ -173,6 +175,10 @@ class SCSettingsMenuModel(Gio.Menu):
     The menu displayed when the menu button is clicked
     """
 
+    __gsignals__ = {
+        'action': (GObject.SIGNAL_RUN_FIRST, None, (str,))
+    }
+
     def __init__(self, w, **properties):
         super().__init__(**properties)
 
@@ -196,6 +202,7 @@ class SCSettingsMenuModel(Gio.Menu):
         self.__action_group.insert(about_action)
 
     def on_rename(self, model, user_data):
+        self.emit('action', 'rename')
         d = SCRenameCueListDialog(self.__main_window, self.__main_window.get_current_cue_stack().name)
         result = d.run()
         if result == Gtk.ResponseType.OK:
@@ -203,11 +210,13 @@ class SCSettingsMenuModel(Gio.Menu):
         d.destroy()
 
     def on_about(self, model, user_data):
+        self.emit('action', 'about')
         d = SCAboutDialog(self.__main_window)
         d.run()
         d.destroy()
 
     def on_properties(self, model, user_data):
+        self.emit('action', 'properties')
         d = SCProjectPropertiesDialog(self.__main_window)
         d.run()
         d.destroy()
@@ -216,7 +225,12 @@ class SCSettingsMenuModel(Gio.Menu):
         return self.__action_group
 
 
-class SCAddCuemenu(Gio.Menu):
+class SCAddCueMenuModel(Gio.Menu):
+
+    __gsignals__ = {
+        'action': (GObject.SIGNAL_RUN_FIRST, None, (str,))
+    }
+
     def __init__(self, w, **properties):
         super().__init__(**properties)
 
@@ -239,6 +253,7 @@ class SCAddCuemenu(Gio.Menu):
         self.__action_group.insert(cue_list)
 
     def on_blank_cue(self, model, user_data):
+        self.emit('action', 'blank')
         current = self.__main_window.get_selected_cue()
         logger.debug("Current cue is {0}".format(current.name if current else "None"))
         c = Cue(self.__main_window.project)
@@ -247,6 +262,7 @@ class SCAddCuemenu(Gio.Menu):
         self.display_add_dialog_for(current, c)
     
     def on_audio_cue(self, model, user_data):
+        self.emit('action', 'audio')
         current = self.__main_window.get_selected_cue()
         logger.debug("Current cue is {0}".format(current.name if current else "None"))
         c = AudioCue(self.__main_window.project)
@@ -265,6 +281,7 @@ class SCAddCuemenu(Gio.Menu):
             pass
     
     def on_cue_list(self, model, user_data):
+        self.emit('action', 'list')
         cl = CueStack(name="Untitled Cue List", project=self.__main_window.project)
         d = SCRenameCueListDialog(self.__main_window, cl.name)
         result = d.run()
