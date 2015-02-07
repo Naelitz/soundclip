@@ -21,7 +21,7 @@ logger = logging.getLogger('SoundClip')
 from enum import Enum
 from gi.repository import GLib, GObject, Gtk
 
-from SoundClip import storage
+from SoundClip import storage, util
 from SoundClip.exception import SCException
 from SoundClip.storage import read, write
 
@@ -121,15 +121,15 @@ class Cue(GObject.GObject):
         :param key: The hash this object was loaded from
         :param j: The json dictionary parsed from the object store
         """
-        self.name = j['name'] if 'name' in j else "Untitled Cue"
-        self.description = j['description'] if 'description' in j else ""
-        self.notes = j['notes'] if 'notes' in j else ""
-        self.number = float(j['number']) if 'number' in j else -1.0
-        self.pre_wait = int(j['preWait']) if 'preWait' in j else 0
-        self.post_wait = int(j['postWait']) if 'postWait' in j else 0
+        self.name = util.pick(j, 'name', "Untitled Cue")
+        self.description = util.pick(j, 'description', "")
+        self.notes = util.pick(j, 'notes', "")
+        self.number = float(util.pick(j, 'number', -1.0))
+        self.pre_wait = int(util.pick(j, 'preWait', 0))
+        self.post_wait = int(util.pick(j, 'postWait', 0))
 
         self.current_hash = key
-        self.last_hash = j['previousRevision'] if 'previousRevision' in j else None
+        self.last_hash = util.pick(j, 'previousRevision', None)
 
         return self
 
@@ -186,6 +186,107 @@ class AudioCue(Cue):
     TODO: clamping
     """
 
+    class Editor(Gtk.Grid):
+        def __init__(self, cue, root, **properties):
+            super().__init__(**properties)
+
+            self.__root = root
+
+            source_label = Gtk.Label("Source:")
+            source_label.set_halign(Gtk.Align.END)
+            self.attach(source_label, 0, 0, 1, 1)
+            self.__source_entry = Gtk.Entry()
+            self.__source_entry.set_text(cue.audio_source_uri)
+            self.__source_entry.set_hexpand(True)
+            self.__source_entry.set_halign(Gtk.Align.FILL)
+            self.attach(self.__source_entry, 1, 0, 1, 1)
+            source_button = Gtk.Button("...")
+            source_button.connect('clicked', self.on_source)
+            self.attach(source_button, 2, 0, 1, 1)
+
+            pitch_label = Gtk.Label("Pitch Adjustment:")
+            pitch_label.set_halign(Gtk.Align.END)
+            self.attach(pitch_label, 0, 1, 1, 1)
+            self.__pitch_scale = Gtk.Scale.new_with_range(Gtk.Orientation.HORIZONTAL, -1.0, 1.0, 0.1)
+            self.__pitch_scale.set_value(cue.pitch)
+            self.__pitch_scale.set_hexpand(True)
+            self.__pitch_scale.set_halign(Gtk.Align.FILL)
+            self.attach(self.__pitch_scale, 1, 1, 2, 1)
+
+            pan_adjustment = Gtk.Label("Pan Adjustment:")
+            pan_adjustment.set_halign(Gtk.Align.END)
+            self.attach(pan_adjustment, 0, 2, 1, 1)
+            self.__pan_scale = Gtk.Scale.new_with_range(Gtk.Orientation.HORIZONTAL, -1.0, 1.0, 0.1)
+            self.__pan_scale.set_value(cue.pan)
+            self.__pan_scale.set_hexpand(True)
+            self.__pan_scale.set_halign(Gtk.Align.FILL)
+            self.attach(self.__pan_scale, 1, 2, 2, 1)
+
+            gain_label = Gtk.Label("Gain Adjustment:")
+            gain_label.set_halign(Gtk.Align.END)
+            self.attach(gain_label, 0, 3, 1, 1)
+            self.__gain_scale = Gtk.Scale.new_with_range(Gtk.Orientation.HORIZONTAL, -1.0, 1.0, 0.1)
+            self.__gain_scale.set_value(cue.gain)
+            self.__gain_scale.set_hexpand(True)
+            self.__gain_scale.set_halign(Gtk.Align.FILL)
+            self.attach(self.__gain_scale, 1, 3, 2, 1)
+
+            fade_in_label = Gtk.Label("Fade In Time:")
+            fade_in_label.set_halign(Gtk.Align.END)
+            self.attach(fade_in_label, 0, 4, 1, 1)
+            self.__fade_in_time_picker = TimePicker(cue.fade_in_time)
+            self.__fade_in_time_picker.set_hexpand(True)
+            self.__fade_in_time_picker.set_halign(Gtk.Align.FILL)
+            self.attach(self.__fade_in_time_picker, 1, 4, 2, 1)
+
+            fade_out_label = Gtk.Label("Fade Out Time:")
+            fade_out_label.set_halign(Gtk.Align.END)
+            self.attach(fade_out_label, 0, 5, 1, 1)
+            self.__fade_out_time_picker = TimePicker(cue.fade_out_time)
+            self.__fade_out_time_picker.set_hexpand(True)
+            self.__fade_out_time_picker.set_halign(Gtk.Align.FILL)
+            self.attach(self.__fade_out_time_picker, 1, 5, 2, 1)
+
+        def on_source(self, button):
+            dialog = Gtk.FileChooserDialog("Select Audio File",
+                                           button.get_parent().get_parent().get_parent().get_parent().get_parent().get_parent(),
+                                           Gtk.FileChooserAction.OPEN,
+                                           (Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL, "Open", Gtk.ResponseType.OK))
+            dialog.set_default_size(800, 400)
+
+            # TODO: Set initial directory to project root
+
+            result = dialog.run()
+            if result == Gtk.ResponseType.OK:
+                p = dialog.get_filename()
+                r = os.path.relpath(p, start=self.__root)
+
+                # TODO: Validate path
+
+                self.__source_entry.set_text(r)
+            elif result == Gtk.ResponseType.CANCEL:
+                logger.debug("CANCEL")
+
+            dialog.destroy()
+
+        def get_source(self):
+            return self.__source_entry.get_text()
+
+        def get_pitch(self):
+            return self.__pitch_scale.get_value()
+
+        def get_pan(self):
+            return self.__pan_scale.get_value()
+
+        def get_gain(self):
+            return self.__gain_scale.get_value()
+
+        def get_fade_in_time(self):
+            return self.__fade_in_time_picker.get_total_milliseconds()
+
+        def get_fade_out_time(self):
+            return self.__fade_out_time_picker.get_total_milliseconds()
+
     pitch = GObject.Property(type=float, minimum=-1.0, maximum=1.0)
     pan = GObject.Property(type=float, minimum=-1.0, maximum=1.0)
     gain = GObject.Property(type=float, minimum=-1.0, maximum=1.0)
@@ -237,7 +338,7 @@ class AudioCue(Cue):
         return self.__pbc.get_position()
 
     def get_editor(self):
-        return SCAudioCueEditorWidget(self, self._project.root)
+        return AudioCue.Editor(self, self._project.root)
 
     def on_editor_closed(self, w, save=True):
         if save:
@@ -250,7 +351,8 @@ class AudioCue(Cue):
 
     def go(self):
         super().go()
-        self.play()
+        self.play(fade=self.fade_in_time)
+        # TODO: Schedule Fade Out
         self.emit('update')
 
     def play(self, fade=0):
@@ -259,6 +361,9 @@ class AudioCue(Cue):
         GLib.timeout_add(AudioCue.__PROGRESS_UPDATE_INTERVAL__, self.__update_func)
 
         # TODO: Prewait / Postwait timers
+
+    def fade_to(self, target_volume, duration, callback=None):
+        self.__pbc.fade_to(target_volume, duration, callback)
 
     def pause(self, fade=0):
         super().pause()
@@ -287,11 +392,11 @@ class AudioCue(Cue):
 
             pass
 
-        self.pitch = float(j['pitch']) if 'pitch' in j else 0.0
-        self.pan = float(j['pan']) if 'pan' in j else 0.0
-        self.gain = float(j['gain']) if 'gain' in j else 0.0
-        self.fade_in_time = int(j['fadeInTime']) if 'fadeInTime' in j else 0
-        self.fade_out_time = int(j['fadeOutTime']) if 'fadeOutTime' in j else 0
+        self.pitch = float(util.pick(j, 'pitch', 0.0))
+        self.pan = float(util.pick(j, 'pan', 0.0))
+        self.gain = float(util.pick(j, 'gain', 0.0))
+        self.fade_in_time = int(util.pick(j, 'fadeInTime', 0))
+        self.fade_out_time = int(util.pick(j, 'fadeOutTime', 0))
 
         return self
 
@@ -308,113 +413,195 @@ class AudioCue(Cue):
 GObject.type_register(AudioCue)
 
 
-class SCAudioCueEditorWidget(Gtk.Grid):
-    def __init__(self, cue, root, **properties):
-        super().__init__(**properties)
+class CuePointer(GObject.Object):
 
-        self.__root = root
+    def __init__(self, cue, target=None, index=0):
+        super().__init__()
 
-        source_label = Gtk.Label("Source:")
-        source_label.set_halign(Gtk.Align.END)
-        self.attach(source_label, 0, 0, 1, 1)
-        self.__source_entry = Gtk.Entry()
-        self.__source_entry.set_text(cue.audio_source_uri)
-        self.__source_entry.set_hexpand(True)
-        self.__source_entry.set_halign(Gtk.Align.FILL)
-        self.attach(self.__source_entry, 1, 0, 1, 1)
-        source_button = Gtk.Button("...")
-        source_button.connect('clicked', self.on_source)
-        self.attach(source_button, 2, 0, 1, 1)
+        if target is not None and index is not 0:
+            raise ValueError("Cue Pointer target must be either specific or relative, not both")
+        elif target is None and index is 0:
+            raise ValueError("Cue Pointer must have a target")
 
-        pitch_label = Gtk.Label("Pitch Adjustment:")
-        pitch_label.set_halign(Gtk.Align.END)
-        self.attach(pitch_label, 0, 1, 1, 1)
-        self.__pitch_scale = Gtk.Scale.new_with_range(Gtk.Orientation.HORIZONTAL, -1.0, 1.0, 0.1)
-        self.__pitch_scale.set_value(cue.pitch)
-        self.__pitch_scale.set_hexpand(True)
-        self.__pitch_scale.set_halign(Gtk.Align.FILL)
-        self.attach(self.__pitch_scale, 1, 1, 2, 1)
+        self.__cue = cue
+        self.__target = target
+        self.__relative_index = index
 
-        pan_adjustment = Gtk.Label("Pan Adjustment:")
-        pan_adjustment.set_halign(Gtk.Align.END)
-        self.attach(pan_adjustment, 0, 2, 1, 1)
-        self.__pan_scale = Gtk.Scale.new_with_range(Gtk.Orientation.HORIZONTAL, -1.0, 1.0, 0.1)
-        self.__pan_scale.set_value(cue.pan)
-        self.__pan_scale.set_hexpand(True)
-        self.__pan_scale.set_halign(Gtk.Align.FILL)
-        self.attach(self.__pan_scale, 1, 2, 2, 1)
+    @GObject.property(type=bool, default=False)
+    def is_relative(self):
+        return self.__target is None
 
-        gain_label = Gtk.Label("Gain Adjustment:")
-        gain_label.set_halign(Gtk.Align.END)
-        self.attach(gain_label, 0, 3, 1, 1)
-        self.__gain_scale = Gtk.Scale.new_with_range(Gtk.Orientation.HORIZONTAL, -1.0, 1.0, 0.1)
-        self.__gain_scale.set_value(cue.gain)
-        self.__gain_scale.set_hexpand(True)
-        self.__gain_scale.set_halign(Gtk.Align.FILL)
-        self.attach(self.__gain_scale, 1, 3, 2, 1)
+    @GObject.property(type=GObject.Object)
+    def target(self):
+        return self.__target
 
-        fade_in_label = Gtk.Label("Fade In Time:")
-        fade_in_label.set_halign(Gtk.Align.END)
-        self.attach(fade_in_label, 0, 4, 1, 1)
-        self.__fade_in_time_picker = TimePicker(cue.fade_in_time)
-        self.__fade_in_time_picker.set_hexpand(True)
-        self.__fade_in_time_picker.set_halign(Gtk.Align.FILL)
-        self.attach(self.__fade_in_time_picker, 1, 4, 2, 1)
+    @GObject.property(type=GObject.TYPE_LONG)
+    def relative_index(self):
+        return self.__relative_index
 
-        fade_out_label = Gtk.Label("Fade Out Time:")
-        fade_out_label.set_halign(Gtk.Align.END)
-        self.attach(fade_out_label, 0, 5, 1, 1)
-        self.__fade_out_time_picker = TimePicker(cue.fade_out_time)
-        self.__fade_out_time_picker.set_hexpand(True)
-        self.__fade_out_time_picker.set_halign(Gtk.Align.FILL)
-        self.attach(self.__fade_out_time_picker, 1, 5, 2, 1)
-
-    def on_source(self, button):
-        dialog = Gtk.FileChooserDialog("Select Audio File",
-                                       button.get_parent().get_parent().get_parent().get_parent().get_parent().get_parent(),
-                                       Gtk.FileChooserAction.OPEN,
-                                       (Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL, "Open", Gtk.ResponseType.OK))
-        dialog.set_default_size(800, 400)
-
-        # TODO: Set initial directory to project root
-
-        result = dialog.run()
-        if result == Gtk.ResponseType.OK:
-            p = dialog.get_filename()
-            r = os.path.relpath(p, start=self.__root)
-
-            # TODO: Validate path
-
-            self.__source_entry.set_text(r)
-        elif result == Gtk.ResponseType.CANCEL:
-            logger.debug("CANCEL")
-
-        dialog.destroy()
-
-    def get_source(self):
-        return self.__source_entry.get_text()
-
-    def get_pitch(self):
-        return self.__pitch_scale.get_value()
-
-    def get_pan(self):
-        return self.__pan_scale.get_value()
-
-    def get_gain(self):
-        return self.__gain_scale.get_value()
-
-    def get_fade_in_time(self):
-        return self.__fade_in_time_picker.get_total_milliseconds()
-
-    def get_fade_out_time(self):
-        return self.__fade_out_time_picker.get_total_milliseconds()
+    def resolve(self, project):
+        if self.is_relative:
+            return project.get_cue_list_for(self.__cue).get_cue_relative_to(self.__cue, self.relative_index)
+        else:
+            return self.target
+GObject.type_register(CuePointer)
 
 
 class ControlCue(Cue):
-    pass
+
+    # TODO: Finish serializing (duration not being stored?)
+
+    target_volume = GObject.property(type=float, minimum=0.0, maximum=10.0)
+    fade_duration = GObject.property(type=GObject.TYPE_LONG)
+    stop_target_on_volume_reached = GObject.property(type=bool, default=True)
+
+    class Editor(Gtk.Grid):
+
+        # TODO: Set initial values
+
+        def __init__(self, project, **properties):
+            super().__init__(**properties)
+
+            self.__project = project
+
+            self.attach(Gtk.Label("Target Cue List:"), 0, 0, 1, 1)
+            self.__stack_store = Gtk.ListStore(int, str)
+            for i in range(0, len(self.__project)):
+                self.__stack_store.append([i, self.__project[i].name])
+            self.__stack_combo = Gtk.ComboBox.new_with_model(self.__stack_store)
+            stack_name_renderer = Gtk.CellRendererText()
+            self.__stack_combo.pack_start(stack_name_renderer, True)
+            self.__stack_combo.add_attribute(stack_name_renderer, 'text', 1)
+            self.__stack_combo.set_hexpand(True)
+            self.__stack_combo.set_halign(Gtk.Align.FILL)
+            self.attach(self.__stack_combo, 1, 0, 1, 1)
+
+            self.attach(Gtk.Label("Target Cue: "), 0, 1, 1, 1)
+            self.__cue_store = Gtk.ListStore(int, str)
+            self.__target_combo = Gtk.ComboBox.new_with_model(self.__cue_store)
+            self.populate_stack_combo(self.__project[0])
+            cue_name_renderer = Gtk.CellRendererText()
+            self.__target_combo.pack_start(cue_name_renderer, True)
+            self.__target_combo.add_attribute(cue_name_renderer, 'text', 1)
+            self.__target_combo.set_hexpand(True)
+            self.__target_combo.set_halign(Gtk.Align.FILL)
+            self.attach(self.__target_combo, 1, 1, 1, 1)
+
+            self.__stack_combo.set_active(0)
+            self.__stack_combo.connect('changed', self.on_list_selected)
+
+            self.attach(Gtk.Label("Target Volume: "), 0, 2, 1, 1)
+            self.__target_vol = Gtk.Scale.new_with_range(Gtk.Orientation.HORIZONTAL, 0, 1.0, 0.1)
+            self.__target_vol.set_hexpand(True)
+            self.__target_vol.set_halign(Gtk.Align.FILL)
+            self.attach(self.__target_vol, 1, 2, 1, 1)
+
+            self.attach(Gtk.Label("Fade Duration:"), 0, 3, 1, 1)
+            self.__fade_duration = TimePicker()
+            self.attach(self.__fade_duration, 1, 3, 1, 1)
+
+            self.__stop_on_target_volume = Gtk.CheckButton("Stop Target Cue on Complete")
+            self.__stop_on_target_volume.set_active(True)
+            self.attach(self.__stop_on_target_volume, 0, 4, 2, 1)
+
+        def on_list_selected(self, combo):
+            itr = combo.get_active_iter()
+            if itr is not None:
+                model = combo.get_model()
+                index = model[itr][0]
+                if index >= 0:
+                    self.populate_stack_combo(self.__project[index])
+
+        def populate_stack_combo(self, stack):
+            self.__cue_store = Gtk.ListStore(int, str)
+            for i in range(0, len(stack)):
+                self.__cue_store.append([i, stack[i].name])
+            self.__target_combo.set_model(self.__cue_store)
+
+        def results(self):
+            return {
+                'type': 'absolute',
+                'target': (self.__project[self.__stack_combo.get_active()])[self.__target_combo.get_active()],
+                'targetVolume': self.__target_vol.get_value(),
+                'duration': self.__fade_duration.get_total_milliseconds(),
+                'stopOnComplete': self.__stop_on_target_volume.get_active()
+            }
+
+    def __init__(self, project, target, target_volume, fade_duration, stop_target_on_volume_reached=True,
+                 name="Untitled Cue", description="", notes="", number=-1.0, pre_wait=0, post_wait=0):
+        super().__init__(project, name=name, description=description, notes=notes, number=number, pre_wait=pre_wait,
+                         post_wait=post_wait)
+
+        if target is not None and target is not isinstance(target, CuePointer):
+            raise ValueError("{0} is not a cue pointer!".format(str(type(target))))
+
+        self.__target = target
+        self.target_volume = target_volume
+        self.fade_duration = fade_duration
+        self.stop_target_on_volume_reached = stop_target_on_volume_reached
+
+    @GObject.Property
+    def duration(self):
+        return self.fade_duration
+
+    def get_editor(self):
+        return ControlCue.Editor(self._project)
+
+    def on_editor_closed(self, w, save=True):
+        if save:
+            data = w.results()
+            if data['type'] is 'absolute':
+                self.__target = CuePointer(self, target=data['target'])
+            else:
+                self.__target = CuePointer(self, index=int(data['target']))
+            self.target_volume = float(data['targetVolume'])
+            self.fade_duration = int(data['duration'])
+            self.stop_target_on_volume_reached = data['stopOnComplete']
+            self.emit('update')
+
+    def go(self):
+        if self.target is not None:
+            c = self.target.resolve(self._project)
+            if self.stop_target_on_volume_reached:
+                c.stop(fade=self.fade_duration)
+            elif isinstance(self.target, AudioCue):
+                c.fade_to(self.target_volume, self.fade_duration)
+
+    @GObject.property
+    def target(self):
+        return self.__target
+
+    def load(self, root, key, j):
+        super().load(root, key, j)
+
+        self.target_volume = float(util.pick(j, 'targetVolume', 0.0))
+        self.fade_duration = int(util.pick(j, 'fadeOutDuration', 0))
+        self.stop_target_on_volume_reached = bool(util.pick(j, 'stopOnTargetVolumeReached', True))
+        if j['target']['type'] is 'relative':
+            self.__target = CuePointer(cue=self, index=j['target']['index'])
+        else:
+            self.__target = CuePointer(cue=self, target=load_cue(
+                root, j['target']['ref'], self._project
+            ) if 'target' in j else None)
+
+        return self
+
+    def store(self, root, d):
+        d['targetVolume'] = self.target_volume
+        d['fadeDuration'] = self.fade_duration
+        d['stopTargetOnVolumeReached'] = self.stop_target_on_volume_reached
+        d['target'] = {
+            'ref': self.target.resolve(self._project).store(root, {}),
+            'type': 'relative' if self.target.is_relative else 'absolute',
+            'index': self.target.relative_index if self.target.is_relative else -1
+        }
+        d['type'] = 'control'
+
+        return super().store(root, d)
 GObject.type_register(ControlCue)
 
 __LOAD_STACK = []
+__CUE_CACHE = {}
 
 
 def load_cue(root, key, project):
@@ -435,6 +622,12 @@ def load_cue(root, key, project):
 
     __LOAD_STACK.append(key)
 
+    if key in __CUE_CACHE:
+        logger.debug("Loading {0} from cue cache".format(key))
+        ret = __CUE_CACHE[key]
+        __LOAD_STACK.pop()
+        return ret
+
     j = storage.read(root, key)
     if 'type' not in j:
         raise MalformedCueException({
@@ -447,11 +640,15 @@ def load_cue(root, key, project):
     logger.debug("Trying to load {0} which is of type {1}".format(key, t))
     if t == 'audio':
         ret = AudioCue(project=project).load(root, key, j)
+    elif t == 'control':
+        ret = ControlCue(project=project, target=None, target_volume=0.0, fade_duration=0,
+                         stop_target_on_volume_reached=True).load(root, key, j)
     else:
         logger.warning("Unknown cue type or missing plugin for type {0}".format(t))
         ret = Cue(project=project).load(root, key, j)
 
     __LOAD_STACK.pop()
+    __CUE_CACHE[key] = ret
     return ret
 
 
@@ -531,6 +728,9 @@ class CueStack(GObject.GObject):
     def index(self, obj):
         return self.__cues.index(obj)
 
+    def get_cue_relative_to(self, cue, rel):
+        return self.__cues.index(cue) + rel
+
     def add_cue_relative_to(self, existing, cue):
         self.__cues.insert(self.index(existing)+1, cue)
         self.emit('changed', self.index(existing)+1, CueStackChangeType.INSERT)
@@ -545,15 +745,17 @@ class CueStack(GObject.GObject):
     def load(root, key, project):
         j = read(root, key)
 
-        name = j['name'] if 'name' in j else "Untitled Cue Stack"
+        name = util.pick(j, 'name', "Untitled Cue Stack")
         current_hash = key
-        last_hash = j['previousRevision'] if 'previousRevision' in j else None
+        last_hash = util.pick(j, 'previousRevision', None)
         cues = []
         if 'cues' in j:
             for cue in j['cues']:
                 c = load_cue(root, cue, project)
                 logger.debug("Loaded {0}".format(repr(c)))
                 cues.append(c)
+        else:
+            logger.error("Bad Cue Stack: No 'cues' object!")
 
         return CueStack(name=name, cues=cues, current_hash=current_hash, last_hash=last_hash, project=project)
 

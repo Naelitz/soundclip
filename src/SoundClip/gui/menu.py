@@ -17,7 +17,7 @@ logger = logging.getLogger('SoundClip')
 
 from gi.repository import Gtk, Gio, GObject
 
-from SoundClip.cue import Cue, CueStack, AudioCue
+from SoundClip.cue import Cue, CueStack, AudioCue, ControlCue
 from SoundClip.gui.dialog import SCCueDialog, SCProjectPropertiesDialog, SCAboutDialog, SCRenameCueListDialog
 from SoundClip.project import Project
 
@@ -246,6 +246,11 @@ class SCAddCueMenuModel(Gio.Menu):
         audio_cue.connect('activate', self.on_audio_cue)
         self.append("Audio Cue", "cue.audio")
         self.__action_group.insert(audio_cue)
+
+        control_cue = Gio.SimpleAction.new("control", None)
+        control_cue.connect('activate', self.on_control_cue)
+        self.append("Control Cue", "cue.control")
+        self.__action_group.insert(control_cue)
         
         cue_list = Gio.SimpleAction.new("list", None)
         cue_list.connect('activate', self.on_cue_list)
@@ -266,6 +271,16 @@ class SCAddCueMenuModel(Gio.Menu):
         current = self.__main_window.get_selected_cue()
         logger.debug("Current cue is {0}".format(current.name if current else "None"))
         c = AudioCue(self.__main_window.project)
+        c.number = current.number + 1 if current else 1
+
+        self.display_add_dialog_for(current, c)
+
+    def on_control_cue(self, model, user_data):
+        self.emit('action', 'control')
+        current = self.__main_window.get_selected_cue()
+        logger.debug("Current cue is {0}".format(current.name if current else "None"))
+        c = ControlCue(self.__main_window.project, target=None, target_volume=0.0, stop_target_on_volume_reached=True,
+                       fade_duration=500)
         c.number = current.number + 1 if current else 1
 
         self.display_add_dialog_for(current, c)

@@ -68,8 +68,10 @@ def read(root, key, force_reload=False):
     :return: the json content of the specified object
     """
     if key in __CACHE and not force_reload:
-        logger.debug("Loading {0} from cache".format(key))
+        logger.debug("Loading {0} from object cache".format(key))
         return __CACHE[key]
+    else:
+        logger.debug("Cache-Miss: {0} not yet in object cache".format(key))
 
     path = os.path.join(root, '.soundclip', 'objects', key[0:2], key[2:40])
     logger.debug("Asked to load {0}, looking for {1}".format(key, path))

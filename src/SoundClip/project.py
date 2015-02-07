@@ -122,6 +122,11 @@ class Project(GObject.GObject):
     def __len__(self):
         return len(self.cue_stacks)
 
+    def get_cue_list_for(self, cue):
+        for stack in self.cue_stacks:
+            if cue in stack:
+                return stack
+
     def close(self):
         for stack in self.cue_stacks:
             stack.stop_all()

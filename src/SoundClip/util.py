@@ -38,3 +38,7 @@ def get_gtk_version():
 def now():
     t = datetime.datetime.now()
     return (t.day * 24 * 60 * 60 + t.second) * 1000 + t.microsecond / 1000.0
+
+
+def pick(d, key, default):
+    return d[key] if key in d else default
