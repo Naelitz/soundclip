@@ -132,6 +132,13 @@ class PlaybackController(GObject.Object):
         self.fade_to(0.0, fade, self.__stop) if fade > 0 else self.__stop()
 
     def fade_to(self, target_volume, duration, callback=None):
+        if duration <= 0:
+            logger.warning("Asked to fade but fade duration was zero!")
+            self.set_volume(target_volume)
+            if callable(callback):
+                callback()
+            return
+
         self.__fade_start_time = -1
         self.__fade_duration = duration
         self.__fade_start_vol = self.volume

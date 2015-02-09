@@ -126,6 +126,7 @@ class Project(GObject.GObject):
         for stack in self.cue_stacks:
             if cue in stack:
                 return stack
+        return None
 
     def close(self):
         for stack in self.cue_stacks:

@@ -459,16 +459,28 @@ class ControlCue(Cue):
 
         # TODO: Set initial values
 
-        def __init__(self, project, **properties):
+        def __init__(self, project, cue, **properties):
             super().__init__(**properties)
 
             self.__project = project
+            self.__cue = cue
 
             self.attach(Gtk.Label("Target Cue List:"), 0, 0, 1, 1)
             self.__stack_store = Gtk.ListStore(int, str)
+
+            global select
+            select = -1
             for i in range(0, len(self.__project)):
-                self.__stack_store.append([i, self.__project[i].name])
+                c = self.__project[i]
+                self.__stack_store.append([i, c.name])
+                if self.__cue.target is not None and c is self.__project.get_cue_list_for(
+                        self.__cue.target.resolve(self.__project)):
+                    select = i
             self.__stack_combo = Gtk.ComboBox.new_with_model(self.__stack_store)
+            if select >= 0:
+                logger.debug("Setting initial cue list to {0}".format(select))
+                self.__stack_combo.set_active(select)
+
             stack_name_renderer = Gtk.CellRendererText()
             self.__stack_combo.pack_start(stack_name_renderer, True)
             self.__stack_combo.add_attribute(stack_name_renderer, 'text', 1)
@@ -479,7 +491,13 @@ class ControlCue(Cue):
             self.attach(Gtk.Label("Target Cue: "), 0, 1, 1, 1)
             self.__cue_store = Gtk.ListStore(int, str)
             self.__target_combo = Gtk.ComboBox.new_with_model(self.__cue_store)
-            self.populate_stack_combo(self.__project[0])
+
+            cl = self.__project.get_cue_list_for(
+                self.__cue if self.__cue.target is None else self.__cue.target.resolve(self.__project)
+            )
+            self.__cue_selector_initialized = False if self.__cue.target is not None else True
+            self.populate_stack_combo(cl if cl is not None else self.__project[0])
+
             cue_name_renderer = Gtk.CellRendererText()
             self.__target_combo.pack_start(cue_name_renderer, True)
             self.__target_combo.add_attribute(cue_name_renderer, 'text', 1)
@@ -492,16 +510,17 @@ class ControlCue(Cue):
 
             self.attach(Gtk.Label("Target Volume: "), 0, 2, 1, 1)
             self.__target_vol = Gtk.Scale.new_with_range(Gtk.Orientation.HORIZONTAL, 0, 1.0, 0.1)
+            self.__target_vol.set_value(self.__cue.target_volume if self.__cue is not None else 0.0)
             self.__target_vol.set_hexpand(True)
             self.__target_vol.set_halign(Gtk.Align.FILL)
             self.attach(self.__target_vol, 1, 2, 1, 1)
 
             self.attach(Gtk.Label("Fade Duration:"), 0, 3, 1, 1)
-            self.__fade_duration = TimePicker()
+            self.__fade_duration = TimePicker(initial_milliseconds=self.__cue.fade_duration if self.__cue else 0)
             self.attach(self.__fade_duration, 1, 3, 1, 1)
 
             self.__stop_on_target_volume = Gtk.CheckButton("Stop Target Cue on Complete")
-            self.__stop_on_target_volume.set_active(True)
+            self.__stop_on_target_volume.set_active(self.__cue.stop_target_on_volume_reached)
             self.attach(self.__stop_on_target_volume, 0, 4, 2, 1)
 
         def on_list_selected(self, combo):
@@ -513,10 +532,18 @@ class ControlCue(Cue):
                     self.populate_stack_combo(self.__project[index])
 
         def populate_stack_combo(self, stack):
+            global select
+            select = -1
             self.__cue_store = Gtk.ListStore(int, str)
             for i in range(0, len(stack)):
                 self.__cue_store.append([i, stack[i].name])
+                if not self.__cue_selector_initialized and stack[i] is self.__cue.target.resolve(self.__project):
+                    select = i
+                    self.__cue_selector_initialized = True
             self.__target_combo.set_model(self.__cue_store)
+            if select >= 0:
+                logger.debug("Setting initially selected target index to {0}".format(select))
+                self.__target_combo.set_active(select)
 
         def results(self):
             return {
@@ -545,7 +572,7 @@ class ControlCue(Cue):
         return self.fade_duration
 
     def get_editor(self):
-        return ControlCue.Editor(self._project)
+        return ControlCue.Editor(self._project, self)
 
     def on_editor_closed(self, w, save=True):
         if save:
@@ -564,8 +591,8 @@ class ControlCue(Cue):
             c = self.target.resolve(self._project)
             if self.stop_target_on_volume_reached:
                 c.stop(fade=self.fade_duration)
-            elif isinstance(self.target, AudioCue):
-                c.fade_to(self.target_volume, self.fade_duration)
+            elif isinstance(c, AudioCue):
+                c.fade_to(target_volume=self.target_volume, duration=self.fade_duration)
 
     @GObject.property
     def target(self):
@@ -575,7 +602,7 @@ class ControlCue(Cue):
         super().load(root, key, j)
 
         self.target_volume = float(util.pick(j, 'targetVolume', 0.0))
-        self.fade_duration = int(util.pick(j, 'fadeOutDuration', 0))
+        self.fade_duration = int(util.pick(j, 'fadeDuration', 0))
         self.stop_target_on_volume_reached = bool(util.pick(j, 'stopOnTargetVolumeReached', True))
         if j['target']['type'] is 'relative':
             self.__target = CuePointer(cue=self, index=j['target']['index'])
@@ -679,8 +706,10 @@ class CueStack(GObject.GObject):
 
         self.__cues = [] if cues is None else cues
 
+        self.__update_listeners = {}
         for cue in self.__cues:
-            cue.connect('update', lambda *x: self.emit('changed', self.__cues.index(cue), CueStackChangeType.UPDATE))
+            i = self.__cues.index(cue)
+            self.__connect_callback(i, cue)
 
     def __len__(self):
         return len(self.__cues)
@@ -696,7 +725,7 @@ class CueStack(GObject.GObject):
         self.__cues[key] = value
 
         self.emit('changed', key, CueStackChangeType.UPDATE if 0 <= key < l else CueStackChangeType.INSERT)
-        value.connect('update', lambda *x: self.emit('changed', key, CueStackChangeType.UPDATE))
+        self.__connect_callback(key, value)
 
     def __iter__(self):
         return self.__cues.__iter__()
@@ -713,7 +742,9 @@ class CueStack(GObject.GObject):
 
         self.__cues.append(other)
         self.emit('changed', len(self.__cues)-1, CueStackChangeType.INSERT)
-        other.connect('update', lambda *x: self.emit('changed', self.__cues.index(other), CueStackChangeType.UPDATE))
+        i = self.__cues.index(other)
+        self.__connect_callback(i, other)
+
         return self
 
     def __isub__(self, other):
@@ -722,8 +753,19 @@ class CueStack(GObject.GObject):
 
         i = self.__cues.index(other)
         self.__cues.remove(other)
+        self.__disconnect_callback(other)
         self.emit('changed', i, CueStackChangeType.DELETE)
         return self
+
+    def __connect_callback(self, i, cue):
+        update_id = cue.connect('update', lambda *x: self.emit(
+            'changed', i, CueStackChangeType.UPDATE
+        ))
+        self.__update_listeners[cue] = update_id
+
+    def __disconnect_callback(self, cue):
+        cue.disconnect(self.__update_listeners[cue])
+        del self.__update_listeners[cue]
 
     def index(self, obj):
         return self.__cues.index(obj)
@@ -732,13 +774,15 @@ class CueStack(GObject.GObject):
         return self.__cues.index(cue) + rel
 
     def add_cue_relative_to(self, existing, cue):
-        self.__cues.insert(self.index(existing)+1, cue)
-        self.emit('changed', self.index(existing)+1, CueStackChangeType.INSERT)
-        cue.connect('changed', self.index(cue), CueStackChangeType.UPDATE)
+        i = self.index(existing)+1
+        self.__cues.insert(i, cue)
+        self.__connect_callback(i, cue)
+        self.emit('changed', i, CueStackChangeType.INSERT)
 
     def remove_cue(self, cue):
         i = self.__cues.index(cue)
         self.__cues.remove(cue)
+        self.__disconnect_callback(cue)
         self.emit('changed', i, CueStackChangeType.DELETE)
 
     @staticmethod
