@@ -111,15 +111,13 @@ def write(root, d, current_hash):
     :return: the sha1 checksum that refers to this project
     """
 
+    if 'previousRevision' not in d:
+        d['previousRevision'] = ''
+
     s = json.dumps(d, sort_keys=True).strip()
-    logger.debug("JSON: {0}".format(s))
     checksum = sha(s)
 
-    # No need to write duplicate objects
-    if checksum is current_hash and os.path.exists(os.path.join(root, '.soundclip', 'objects', checksum)):
-        return checksum, d['previousRevision']
-
-    d['previousRevision'] = current_hash
+    logger.debug("Asked to store {0} (current has was {1}, checksum: {2})".format(s, current_hash, checksum))
 
     path = os.path.join(root, '.soundclip', 'objects', checksum[0:2])
 
@@ -127,6 +125,14 @@ def write(root, d, current_hash):
         os.makedirs(path)
 
     object_path = os.path.join(path, checksum[2:40])
+
+    # No need to write duplicate objects
+    if checksum == current_hash and os.path.exists(object_path):
+        logger.debug("{0} is already in the object store, skipping".format(checksum))
+        return checksum, d['previousRevision']
+
+    d['previousRevision'] = current_hash
+
     logger.debug("Writing {0}".format(object_path))
     with open(object_path, "w") as f:
         f.write(s)
