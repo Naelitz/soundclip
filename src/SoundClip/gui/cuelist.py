@@ -217,7 +217,7 @@ class SCCueListMenu(Gtk.Popover):
         self.show_all()
 
     def on_play(self, button):
-        self.__focused_cue.play()
+        self.__focused_cue.action()
         self.hide()
 
     def on_pause(self, button):

@@ -469,8 +469,6 @@ GObject.type_register(CuePointer)
 
 class ControlCue(Cue):
 
-    # TODO: Finish serializing (duration not being stored?)
-
     target_volume = GObject.property(type=float, minimum=0.0, maximum=10.0)
     fade_duration = GObject.property(type=GObject.TYPE_LONG)
     stop_target_on_volume_reached = GObject.property(type=bool, default=True)
