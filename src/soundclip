@@ -53,12 +53,20 @@ def main():
     Gtk.init(sys.argv)
     Gst.init(sys.argv)
 
+    Gtk.Settings.get_default().set_property('gtk-application-prefer-dark-theme', True)
+
     p = None
     if args.project:
         logger.info("Trying to load project from {0}".format(args.project))
-        p = Project.load(args.project)
-
-    Gtk.Settings.get_default().set_property('gtk-application-prefer-dark-theme', True)
+        try:
+            p = Project.load(args.project)
+        except:
+            logger.warn("Unable to load project at {0}".format(args.project))
+            p = None
+            d = Gtk.MessageDialog(None, 0, Gtk.MessageType.WARNING, Gtk.ButtonsType.OK, "Project Not Found")
+            d.format_secondary_text("The project at {0} could not be found or is corrupt.".format(args.project))
+            d.run()
+            d.destroy()
 
     main_window = mainwindow.SCMainWindow(project=p)
     main_window.show_all()
