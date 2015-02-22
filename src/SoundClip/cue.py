@@ -603,7 +603,7 @@ class ControlCue(Cue):
 
         self.target_volume = float(util.pick(j, 'targetVolume', 0.0))
         self.fade_duration = int(util.pick(j, 'fadeDuration', 0))
-        self.stop_target_on_volume_reached = bool(util.pick(j, 'stopOnTargetVolumeReached', True))
+        self.stop_target_on_volume_reached = bool(util.pick(j, 'stopTargetOnVolumeReached', True))
         if j['target']['type'] is 'relative':
             self.__target = CuePointer(cue=self, index=j['target']['index'])
         else:
