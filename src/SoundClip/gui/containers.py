@@ -67,7 +67,7 @@ class SCCueListContainer(Gtk.Notebook):
         self.show_all()
 
     def get_selected_cue(self):
-        self.get_nth_page(self.get_current_page()).get_selected()
+        return self.get_nth_page(self.get_current_page()).get_selected()
 
     def get_current_stack(self):
         return self.get_nth_page(self.get_current_page()).get_stack()
