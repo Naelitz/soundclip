@@ -89,7 +89,7 @@ class SCCueListModel(Gtk.TreeStore):
 
     @staticmethod
     def __get_elapsed_post_progress(cue):
-        return 0 if cue.pre_wait <= 0 else 100 * (cue.elapsed_prewait / cue.pre_wait)
+        return 0 if cue.post_wait <= 0 else 100 * (cue.elapsed_postwait / cue.post_wait)
 
     def do_get_value(self, itr, column):
         return {

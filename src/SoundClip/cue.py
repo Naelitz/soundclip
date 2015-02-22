@@ -15,6 +15,7 @@ import os
 import logging
 from SoundClip.audio import PlaybackController
 from SoundClip.gui.widgets import TimePicker
+from SoundClip.util import Timer
 
 logger = logging.getLogger('SoundClip')
 
@@ -48,6 +49,9 @@ class PlaybackState(Enum):
     PAUSED = 2
 
 
+__PROGRESS_UPDATE_INTERVAL__ = 100
+
+
 class Cue(GObject.GObject):
     """
     The base cue object
@@ -78,6 +82,7 @@ class Cue(GObject.GObject):
         self.notes = notes
         self.number = number
         self.pre_wait = pre_wait
+        self.__elapsed_pre_wait = 0
         self.post_wait = post_wait
 
     def __len__(self):
@@ -85,6 +90,26 @@ class Cue(GObject.GObject):
 
     def go(self):
         logger.debug("(CUE) GO received for [{0:g}]{1}".format(self.number, self.name))
+        if self.pre_wait <= 0:
+            self.action()
+        else:
+            t = Timer(self.pre_wait, __PROGRESS_UPDATE_INTERVAL__)
+
+            def timeout(opt, progress):
+                self.__elapsed_pre_wait = progress
+                self.emit('update')
+
+            def expire(opt):
+                self.__elapsed_pre_wait = 0
+                self.action()
+
+            t.connect('update', timeout)
+            t.connect('expired', expire)
+
+            t.fire()
+
+    def action(self):
+        logger.debug("(CUE) Starting action for [{0:g}]{1}".format(self.number, self.name))
 
     def pause(self):
         logger.debug("PAUSE received for [{0:g}]{1}".format(self.number, self.name))
@@ -94,11 +119,11 @@ class Cue(GObject.GObject):
 
     @GObject.property
     def duration(self):
-        return 1000
+        return 0
 
     @GObject.property
     def elapsed_prewait(self):
-        return 0
+        return self.__elapsed_pre_wait
 
     @GObject.property
     def elapsed(self):
@@ -293,8 +318,6 @@ class AudioCue(Cue):
     fade_in_time = GObject.Property(type=GObject.TYPE_LONG, default=0)
     fade_out_time = GObject.Property(type=GObject.TYPE_LONG, default=0)
 
-    __PROGRESS_UPDATE_INTERVAL__ = 100
-
     def __init__(self, project, name="Untitled Cue", description="", notes="", number=-1.0, pre_wait=0, post_wait=0,
                  audio_source_uri="", pitch=0, pan=0, gain=0, fade_in_time=0, fade_out_time=0):
         super().__init__(project, name, description, notes, number, pre_wait, post_wait)
@@ -349,18 +372,15 @@ class AudioCue(Cue):
             self.fade_in_time = w.get_fade_in_time()
             self.fade_out_time = w.get_fade_out_time()
 
-    def go(self):
-        super().go()
-        self.play(fade=self.fade_in_time)
+    def action(self):
+        super().action()
+
+        self.__pbc.play(fade=self.fade_in_time)
+        self.emit('update')
+        GLib.timeout_add(__PROGRESS_UPDATE_INTERVAL__, self.__update_func)
+
         # TODO: Schedule Fade Out
         self.emit('update')
-
-    def play(self, fade=0):
-        self.__pbc.play(fade=fade)
-        self.emit('update')
-        GLib.timeout_add(AudioCue.__PROGRESS_UPDATE_INTERVAL__, self.__update_func)
-
-        # TODO: Prewait / Postwait timers
 
     def fade_to(self, target_volume, duration, callback=None):
         self.__pbc.fade_to(target_volume, duration, callback)
@@ -586,7 +606,9 @@ class ControlCue(Cue):
             self.stop_target_on_volume_reached = data['stopOnComplete']
             self.emit('update')
 
-    def go(self):
+    def action(self):
+        super().action()
+
         if self.target is not None:
             c = self.target.resolve(self._project)
             if self.stop_target_on_volume_reached:

@@ -13,7 +13,39 @@
 
 import hashlib
 import datetime
-from gi.repository import Gtk
+from gi.repository import GLib, Gtk, GObject
+
+
+class Timer(GObject.Object):
+
+    __gsignals__ = {
+        'expired': (GObject.SIGNAL_RUN_FIRST, None, ()),
+        'update': (GObject.SIGNAL_RUN_FIRST, None, (GObject.TYPE_LONG,))
+    }
+
+    def __init__(self, duration, resolution=50):
+        super().__init__()
+
+        self.__duration = duration
+        self.__resolution = resolution
+        self.__start_time = -1
+
+    def fire(self):
+        self.__start_time = now()
+        GLib.timeout_add(self.__resolution, self.tick)
+
+    def tick(self):
+        current_time = now()
+
+        more = current_time < self.__start_time + self.__duration
+
+        if more:
+            self.emit('update', current_time-self.__start_time)
+        else:
+            self.emit('expired')
+
+        return more
+GObject.type_register(Timer)
 
 
 def timepart(ms):
