@@ -378,8 +378,13 @@ class SCCueList(Gtk.ScrolledWindow):
         if event.keyval is Gdk.KEY_space:
             c = self.get_selected()
             logger.debug("Type of selected cue is {0}".format(str(type(c))))
-            logger.debug(c.go)
-            c.go()
+
+            if event.state & Gdk.ModifierType.SHIFT_MASK:
+                logger.debug("Skipping pre-wait")
+                c.action()
+            else:
+                c.go()
+
             self.select_next()
             return False
         return True
