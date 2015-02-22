@@ -191,6 +191,11 @@ class SCSettingsMenuModel(Gio.Menu):
         self.append("Rename CueList", "hb.rename")
         self.__action_group.insert(rename_action)
 
+        renumber_action = Gio.SimpleAction.new("renumber", None)
+        renumber_action.connect("activate", self.on_renumber)
+        self.append("Renumber Cues", "hb.renumber")
+        self.__action_group.insert(renumber_action)
+
         properties_action = Gio.SimpleAction.new("properties", None)
         properties_action.connect("activate", self.on_properties)
         self.append("Project Properties", "hb.properties")
@@ -207,6 +212,20 @@ class SCSettingsMenuModel(Gio.Menu):
         result = d.run()
         if result == Gtk.ResponseType.OK:
             self.__main_window.get_current_cue_stack().rename(d.get_name())
+        d.destroy()
+
+    def on_renumber(self, model, user_data):
+        self.emit('action', 'renumber')
+        d = Gtk.MessageDialog(self.__main_window, 0, Gtk.MessageType.WARNING, Gtk.ButtonsType.YES_NO,
+                              "Renumber Current Cue List")
+        d.format_secondary_text("This will re-number all cues in the current cue list. This cannot be undone.\n"
+                                "Are you sure you want to continue?")
+        response = d.run()
+        if response == Gtk.ResponseType.YES:
+            stack = self.__main_window.get_current_cue_stack()
+            for i, cue in enumerate(stack):
+                cue.number = i+1
+
         d.destroy()
 
     def on_about(self, model, user_data):
