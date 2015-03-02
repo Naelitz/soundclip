@@ -114,8 +114,8 @@ class Project(GObject.GObject):
         if self.__root is not None:
             # TODO: Copy project if root is already set
             logger.warning("Need to copy project to new location!")
-
-        self.__root = path
+        else:
+            self.__root = path
 
     def init_logfile(self):
         if self.__root is not None and self.__logfile_handler is None:

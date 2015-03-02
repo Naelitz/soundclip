@@ -13,6 +13,7 @@
 
 import os
 import logging
+import shutil
 from SoundClip.audio import PlaybackController
 from SoundClip.gui.widgets import TimePicker
 from SoundClip.util import Timer
@@ -278,15 +279,31 @@ class AudioCue(Cue):
                                            Gtk.FileChooserAction.OPEN,
                                            (Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL, "Open", Gtk.ResponseType.OK))
             dialog.set_default_size(800, 400)
-
-            # TODO: Set initial directory to project root
+            dialog.set_current_folder(self.__root)
 
             result = dialog.run()
             if result == Gtk.ResponseType.OK:
                 p = dialog.get_filename()
-                r = os.path.relpath(p, start=self.__root)
 
-                # TODO: Validate path
+                if not util.in_directory(p, self.__root):
+                    logger.warning("The requested file '{0}' is not in the project root".format(p))
+                    d = Gtk.MessageDialog(dialog, 0, Gtk.MessageType.WARNING, Gtk.ButtonsType.OK_CANCEL,
+                                          "'{0}' is not in the project root!".format(p))
+                    d.format_secondary_text("It must be copied to the project root before it can be used")
+
+                    sub_result = d.run()
+                    if sub_result == Gtk.ResponseType.OK:
+                        logger.info("Copying '{0}' into the project root".format(p))
+                        new_path = os.path.join(self.__root, os.path.split(p)[1])
+                        shutil.copy2(p, new_path)
+                        p = new_path
+                        d.destroy()
+                    else:
+                        d.destroy()
+                        dialog.destroy()
+                        return
+
+                r = os.path.relpath(p, start=self.__root)
 
                 self.__source_entry.set_text(r)
             elif result == Gtk.ResponseType.CANCEL:
@@ -474,8 +491,6 @@ class ControlCue(Cue):
     stop_target_on_volume_reached = GObject.property(type=bool, default=True)
 
     class Editor(Gtk.Grid):
-
-        # TODO: Set initial values
 
         def __init__(self, project, cue, **properties):
             super().__init__(**properties)

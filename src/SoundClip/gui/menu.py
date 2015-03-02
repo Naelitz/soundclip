@@ -80,8 +80,7 @@ class SCHeaderBar(Gtk.HeaderBar):
 
         self.pack_end(Gtk.Separator(orientation=Gtk.Orientation.VERTICAL))
 
-        self.__panic_button = Gtk.Button.new_from_icon_name("dialog-warning",
-                                                            Gtk.IconSize.SMALL_TOOLBAR)  # TODO: Specify icon
+        self.__panic_button = Gtk.Button.new_from_icon_name("dialog-warning", Gtk.IconSize.SMALL_TOOLBAR)
         self.__panic_button.set_tooltip_text("PANIC: Stop all automations and cues")
         self.__panic_button.connect("clicked", self.on_panic)
         self.pack_end(self.__panic_button)

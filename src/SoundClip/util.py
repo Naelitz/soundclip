@@ -13,6 +13,7 @@
 
 import hashlib
 import datetime
+import os
 from gi.repository import GLib, Gtk, GObject
 
 
@@ -74,3 +75,21 @@ def now():
 
 def pick(d, key, default):
     return d[key] if key in d else default
+
+
+def in_directory(file, directory):
+    """
+    See http://stackoverflow.com/q/3812849/1200316
+
+    :param file:
+    :param directory:
+    :return: Whether or not the specified file is in the specified directory
+    """
+
+    # make both absolute
+    directory = os.path.join(os.path.realpath(directory), '')
+    file = os.path.realpath(file)
+
+    # return true, if the common prefix of both is equal to directory
+    # e.g. /a/b/c/d.rst and directory is /a/b, the common prefix is /a/b
+    return os.path.commonprefix([file, directory]) == directory
