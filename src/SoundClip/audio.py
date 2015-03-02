@@ -94,7 +94,7 @@ class PlaybackController(GObject.Object):
     def __on_decoded_pad(self, element, pad):
         name = pad.query_caps(None).to_string()
         if name.startswith("audio/") and not self.__conv_sink.is_linked():
-            print("Linking Pad: {0}".format(name))
+            logger.debug("Linking Pad: {0}".format(name))
             pad.link(self.__conv_sink)
 
     def reset(self):
