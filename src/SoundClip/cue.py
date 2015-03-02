@@ -586,6 +586,7 @@ class ControlCue(Cue):
         self.stop_target_on_volume_reached = stop_target_on_volume_reached
 
         self.__elapsed = 0
+        self.__state = PlaybackState.STOPPED
 
     @GObject.Property
     def duration(self):
@@ -610,6 +611,14 @@ class ControlCue(Cue):
             self.stop_target_on_volume_reached = data['stopOnComplete']
             self.emit('update')
 
+    @GObject.Property
+    def state(self):
+        return self.__state
+
+    def go(self):
+        super().go()
+        self.__state = PlaybackState.PLAYING
+
     def action(self):
         super().action()
 
@@ -628,6 +637,7 @@ class ControlCue(Cue):
 
         def expire(opt):
             self.__elapsed = 0
+            self.__state = PlaybackState.STOPPED
 
         t.connect('update', timeout)
         t.connect('expired', expire)
