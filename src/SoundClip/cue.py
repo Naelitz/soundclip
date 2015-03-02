@@ -585,9 +585,15 @@ class ControlCue(Cue):
         self.fade_duration = fade_duration
         self.stop_target_on_volume_reached = stop_target_on_volume_reached
 
+        self.__elapsed = 0
+
     @GObject.Property
     def duration(self):
         return self.fade_duration
+
+    @GObject.Property
+    def elapsed(self):
+        return self.__elapsed
 
     def get_editor(self):
         return ControlCue.Editor(self._project, self)
@@ -613,6 +619,20 @@ class ControlCue(Cue):
                 c.stop(fade=self.fade_duration)
             elif isinstance(c, AudioCue):
                 c.fade_to(target_volume=self.target_volume, duration=self.fade_duration)
+
+        t = Timer(self.fade_duration, __PROGRESS_UPDATE_INTERVAL__)
+
+        def timeout(opt, progress):
+            self.__elapsed = progress
+            self.emit('update')
+
+        def expire(opt):
+            self.__elapsed = 0
+
+        t.connect('update', timeout)
+        t.connect('expired', expire)
+
+        t.fire()
 
     @GObject.property
     def target(self):
