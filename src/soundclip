@@ -80,7 +80,7 @@ def init_logging(level):
     stream = logging.StreamHandler()
     stream.setLevel(level)
 
-    formatter = logging.Formatter("[%(levelname)s]: %(message)s")
+    formatter = logging.Formatter("[%(module)s | %(levelname)s]: %(message)s")
     stream.setFormatter(formatter)
 
     logger.addHandler(stream)

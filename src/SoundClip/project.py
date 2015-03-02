@@ -12,6 +12,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import json
+from logging.handlers import RotatingFileHandler
 import os
 import logging
 logger = logging.getLogger('SoundClip')
@@ -44,9 +45,10 @@ class Project(GObject.GObject):
         'stack-changed': (GObject.SIGNAL_RUN_FIRST, None, (int, GObject.TYPE_PYOBJECT))
     }
 
+    __MAX_LOG_COUNT__ = 5
+
     name = GObject.Property(type=str)
     creator = GObject.Property(type=str)
-    root = GObject.property(type=str)
     panic_fade_time = GObject.property(type=GObject.TYPE_LONG)
     current_hash = GObject.property(type=str)
     last_hash = GObject.property(type=str)
@@ -56,12 +58,16 @@ class Project(GObject.GObject):
         GObject.GObject.__init__(self)
         self.name = name
         self.creator = creator
-        self.root = root
+        self.__root = root
         self.cue_stacks = [CueStack(project=self), ] if cue_stacks is None else cue_stacks
         self.panic_fade_time = panic_fade_time
         self.current_hash = current_hash
         self.last_hash = last_hash
         self.__dirty = True
+
+        self.__logfile_handler = None
+
+        self.init_logfile()
 
     def __iadd__(self, other):
         if not isinstance(other, CueStack):
@@ -70,12 +76,6 @@ class Project(GObject.GObject):
         self.emit('stack-changed', len(self.cue_stacks)-1, StackChangeAction.INSERT)
 
         return self
-
-    def add_cuelist(self, other):
-        if not isinstance(other, CueStack):
-            raise TypeError("Can't add type {0} to Project".format(type(other)))
-        self.cue_stacks.append(other)
-        self.emit('stack-changed', len(self.cue_stacks)-1, StackChangeAction.INSERT)
 
     def __isub__(self, other):
         if not isinstance(other, CueStack):
@@ -89,22 +89,6 @@ class Project(GObject.GObject):
         self.emit('stack-changed', key, StackChangeAction.DELETE)
 
         return self
-
-    def remove_cuelist(self, other):
-        if not isinstance(other, CueStack):
-            raise TypeError("Can't remove type {0} from Project".format(type(other)))
-        elif other not in self.cue_stacks:
-            raise ValueError("{0} isn't in this project".format(other))
-
-        key = self.cue_stacks.index(other)
-        self.cue_stacks.remove(key)
-
-        self.emit('stack-changed', key, StackChangeAction.DELETE)
-
-    def remove_cue(self, cue):
-        for stack in self.cue_stacks:
-            if cue in stack:
-                stack.remove_cue(cue)
 
     def __setitem__(self, key, value):
         if not isinstance(value, CueStack):
@@ -122,6 +106,64 @@ class Project(GObject.GObject):
     def __len__(self):
         return len(self.cue_stacks)
 
+    @GObject.property(type=str)
+    def root(self):
+        return self.__root
+
+    def change_root(self, path):
+        if self.__root is not None:
+            # TODO: Copy project if root is already set
+            logger.warning("Need to copy project to new location!")
+
+        self.__root = path
+
+    def init_logfile(self):
+        if self.__root is not None and self.__logfile_handler is None:
+            logpath = os.path.join(self.__root, os.path.join(".soundclip", "logs"))
+
+            if not os.path.exists(logpath):
+                os.makedirs(logpath)
+
+            self.__logfile_handler = RotatingFileHandler(
+                os.path.join(logpath, "soundclip.log"), backupCount=Project.__MAX_LOG_COUNT__
+            )
+            self.__logfile_handler.setLevel(10)
+            self.__logfile_handler.setFormatter(logging.Formatter(
+                fmt="%(asctime)s - [%(module)s | %(levelname)s]: %(message)s",
+                datefmt='%Y-%m-%d %I:%M:%S %p'
+            ))
+            logger.addHandler(self.__logfile_handler)
+            self.__logfile_handler.doRollover()
+
+            logger.info("Logging to file: {0}".format(os.path.join(logpath, "soundclip.log")))
+
+    def close_logfile(self):
+        if self.__logfile_handler is not None:
+            logger.removeHandler(self.__logfile_handler)
+            self.__logfile_handler = None
+
+    def add_cuelist(self, other):
+        if not isinstance(other, CueStack):
+            raise TypeError("Can't add type {0} to Project".format(type(other)))
+        self.cue_stacks.append(other)
+        self.emit('stack-changed', len(self.cue_stacks)-1, StackChangeAction.INSERT)
+
+    def remove_cuelist(self, other):
+        if not isinstance(other, CueStack):
+            raise TypeError("Can't remove type {0} from Project".format(type(other)))
+        elif other not in self.cue_stacks:
+            raise ValueError("{0} isn't in this project".format(other))
+
+        key = self.cue_stacks.index(other)
+        self.cue_stacks.remove(key)
+
+        self.emit('stack-changed', key, StackChangeAction.DELETE)
+
+    def remove_cue(self, cue):
+        for stack in self.cue_stacks:
+            if cue in stack:
+                stack.remove_cue(cue)
+
     def get_cue_list_for(self, cue):
         for stack in self.cue_stacks:
             if cue in stack:
@@ -131,6 +173,9 @@ class Project(GObject.GObject):
     def close(self):
         for stack in self.cue_stacks:
             stack.stop_all()
+
+        self.close_logfile()
+
         # TODO: Save project to disk if new
         pass
 
@@ -165,21 +210,21 @@ class Project(GObject.GObject):
         return p
 
     def store(self):
-        if not self.root:
+        if not self.__root:
             raise IllegalProjectStateException({
                 "message": "Projects must have a root before they can be saved"
             })
 
-        if not os.path.exists(self.root) or not os.path.isdir(self.root):
-            os.makedirs(self.root)
+        if not os.path.exists(self.__root) or not os.path.isdir(self.__root):
+            os.makedirs(self.__root)
 
         d = {'name': self.name, 'creator': self.creator, 'stacks': [], 'panicFadeTime': self.panic_fade_time}
 
         for stack in self.cue_stacks:
-            d['stacks'].append(stack.store(self.root))
+            d['stacks'].append(stack.store(self.__root))
 
-        with open(os.path.join(self.root, '.soundclip', 'project.json'), 'w') as f:
+        with open(os.path.join(self.__root, '.soundclip', 'project.json'), 'w') as f:
             json.dump(d, f)
             f.write("\n")
 
-        logger.info("Project {0} saved to {1}".format(self.name, self.root))
+        logger.info("Project {0} saved to {1}".format(self.name, self.__root))
