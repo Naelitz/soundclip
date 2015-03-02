@@ -67,6 +67,67 @@
       <div class="outer">
         <section id="main">
   
+    <article id="post-Alpha-Status" class="article article-type-post" itemscope itemprop="blogPost">
+  <div class="article-meta">
+    <a href="/soundclip/2015/03/01/Alpha-Status/" class="article-date">
+  <time datetime="2015-03-02T02:28:32.000Z" itemprop="datePublished">Mar 1 2015</time>
+</a>
+    
+  </div>
+  <div class="article-inner">
+    
+    
+      <header class="article-header">
+        
+  
+    <h1 itemprop="name">
+      <a class="article-title" href="/soundclip/2015/03/01/Alpha-Status/">Alpha Status</a>
+    </h1>
+  
+
+      </header>
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+        <p>Well, here we are. It’s been about two months since I’ve started on this project. Most of the functionality I wanted for the show that’s coming up is there! I think it’s at the point where I feel comfortable making the initial Alpha release!</p>
+<h3 id="What_does_this_mean?">What does this mean?</h3>
+<p>I want to start using the <a href="https://github.com/techwiz24/soundclip/issues" target="_blank" rel="external">GitHub issue tracker</a> to start tracking problems that come up. After this post goes up, I’ll start writing up some of the bugs that are present in this alpha.</p>
+<p>Because it’s an alpha, don’t expect <code>master</code> to work 100% (or even 50%…) or be bug free. It definitely won’t be. Once the software reaches the beta stage, master will be the <code>stable</code> or <code>release</code> branch, but until that point, it’s the branch I’ll actively develop on.</p>
+<h3 id="So,_is_it_ready_for_use_in_a_production?">So, is it ready for use in a production?</h3>
+<p><strong>NO!</strong> Seriously, you probably want to stay away from using it in any semi-professional production at this point. It’s not a <a href="http://figure53.com/qlab" target="_blank" rel="external">QLab</a> killer yet.</p>
+<blockquote>
+<p>Side rant: The QLab site doesn’t support https. Seriously?</p>
+</blockquote>
+<p><em>Longer Answer</em>: Maybe. If you <em>really</em>, <strong><em>really</em></strong> want to use it. I intend on using it for an upcoming production in about four weeks time. I can’t guarantee that it won’t eat your project files, cues, or media. I can’t guarantee it won’t crash or start leaking memory mid-show. But I do know it works relatively well at this point in time. I plan on using these next four weeks to fix up bugs and improve stability. This means that I won’t be adding <strong>any new features</strong> unless it’s a feature I absolutely need for this upcoming production.</p>
+<h3 id="Well_then,_how_do_I_help?">Well then, how do I help?</h3>
+<p>You can help by completely disregarding what I just mentioned above! What I really need at this point are other eyes. What features do you need production to production? What currently implemented features don’t function as expected or are straight up broken? I want this to be something that <em>every</em> Sound Designer can use in <strong><em>any</em></strong> production. I don’t think you should have to have <a href="http://store.apple.com/us/mac" target="_blank" rel="external">expensive</a> hardware and software to professionally execute a production.</p>
+<h3 id="Alright,_alright,_let_me_use_it_already!">Alright, alright, let me use it already!</h3>
+<p>Awesome! All you should need is <code>python3</code>, <code>python-gi</code>, <code>gtk3</code>, and <code>gstreamer</code>. Clone the project and execute the <code>soundclip</code> script in the root of the <code>src</code> folder and you’ll be off to the races:</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line">git clone https://github.com/techwiz24/soundclip.git</div><div class="line">./soundclip/src/soundclip</div></pre></td></tr></table></figure>
+
+<p>You should also be able to download a tarball of the alpha <a href="https://github.com/techwiz24/soundclip/releases/tag/v0.1.0-alpha1" target="_blank" rel="external">here</a> if you don’t want the git repository.</p>
+<p>Make sure to save the project before trying to add audio cues! If I have any free time this week, I’ll try to make a video to show people around.</p>
+<h3 id="Next_Steps">Next Steps</h3>
+<p>As mentioned above, I’ve got about three to three and a half weeks to stabilize and bugfix SoundClip. After the production is over (assuming the software survives the production), I want to make the interface nicer to use. Then, I want to try and bring it closer to feature parity with QLab (at least the audio portion). By next year, I want to have remote capibilities (D-Bus / OSC / MSC).</p>
+<h3 id="Parting_Notes">Parting Notes</h3>
+<p>Currently I’ve got it configured to show all logging information by default. SoundClip will save the five most recent logs for any project with the project files. If your show runs for any decent length, this may end up taking up a lot of disk space. Because SoundClip will log to files and to <code>stdout</code> by default, you don’t have to worry about saving console output if you encounter a problem. Just make sure to copy the log file from <code>.../.soundclip/logs/soundclip.log</code> somewhere safe to save it.</p>
+<p>I hope others find this software useful. Break a leg!</p>
+
+      
+    </div>
+    <footer class="article-footer">
+      <a data-url="https://techwiz24.github.io/soundclip/2015/03/01/Alpha-Status/" data-id="z347v2hcu51ub3k9" class="article-share-link">Share</a>
+      
+      
+  <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/soundclip/tags/release/">release</a></li></ul>
+
+    </footer>
+  </div>
+  
+</article>
+
+
+  
     <article id="post-Let-There-Be-Sound" class="article article-type-post" itemscope itemprop="blogPost">
   <div class="article-meta">
     <a href="/soundclip/2015/01/20/Let-There-Be-Sound/" class="article-date">
@@ -332,14 +393,28 @@
     
   
     
+  <div class="widget-wrap">
+    <h3 class="widget-title">Tags</h3>
+    <div class="widget">
+      <ul class="tag-list"><li class="tag-list-item"><a class="tag-list-link" href="/soundclip/tags/release/">release</a><span class="tag-list-count">1</span></li></ul>
+    </div>
+  </div>
+
   
     
+  <div class="widget-wrap">
+    <h3 class="widget-title">Tag Cloud</h3>
+    <div class="widget tagcloud">
+      <a href="/soundclip/tags/release/" style="font-size: NaNpx;">release</a>
+    </div>
+  </div>
+
   
     
   <div class="widget-wrap">
     <h3 class="widget-title">Archives</h3>
     <div class="widget">
-      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/soundclip/archives/2015/01/">January 2015</a><span class="archive-list-count">6</span></li></ul>
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/soundclip/archives/2015/03/">March 2015</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/soundclip/archives/2015/01/">January 2015</a><span class="archive-list-count">6</span></li></ul>
     </div>
   </div>
 
@@ -349,6 +424,10 @@
     <h3 class="widget-title">Recents</h3>
     <div class="widget">
       <ul>
+        
+          <li>
+            <a href="/soundclip/2015/03/01/Alpha-Status/">Alpha Status</a>
+          </li>
         
           <li>
             <a href="/soundclip/2015/01/20/Let-There-Be-Sound/">Let There Be Sound</a>
@@ -364,10 +443,6 @@
         
           <li>
             <a href="/soundclip/2015/01/06/Looking-Better/">Looking Better</a>
-          </li>
-        
-          <li>
-            <a href="/soundclip/2015/01/02/Lets-Talk-Roadmaps/">Lets Talk Roadmaps</a>
           </li>
         
       </ul>
