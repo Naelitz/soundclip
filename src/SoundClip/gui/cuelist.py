@@ -201,7 +201,7 @@ class SCCueListMenu(Gtk.Popover):
             stop_button = Gtk.Button.new_with_label("Stop")
             stop_button.connect('clicked', self.on_stop)
             self.__box.add(stop_button)
-        else:
+        elif not self.__main_window.locked:
             edit_button = Gtk.Button.new_with_label("Edit")
             edit_button.connect('clicked', self.on_edit)
             self.__box.add(edit_button)
@@ -356,8 +356,6 @@ class SCCueList(Gtk.ScrolledWindow):
         self.__title_widget.set_text(name)
 
     def on_click(self, view, event):
-        if self.__main_window.locked:
-            return
         x, y = int(event.x), int(event.y)
         path = self.__tree_view.get_path_at_pos(x, y)
         if path:
@@ -365,7 +363,9 @@ class SCCueList(Gtk.ScrolledWindow):
             if cue is not None:
                 if event.button is Gdk.BUTTON_SECONDARY:
                     self.__popover.popover_cue(cue, x, y)
-                elif event.button is Gdk.BUTTON_PRIMARY and event.type == Gdk.EventType.DOUBLE_BUTTON_PRESS:
+                elif event.button is Gdk.BUTTON_PRIMARY and \
+                        event.type == Gdk.EventType.DOUBLE_BUTTON_PRESS and \
+                        not self.__main_window.locked:
                     dialog = SCCueDialog(self.__main_window, cue)
                     dialog.run()
                     dialog.destroy()
