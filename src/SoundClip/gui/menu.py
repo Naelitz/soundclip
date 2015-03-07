@@ -13,6 +13,8 @@
 
 import os
 import logging
+from SoundClip.util import now
+
 logger = logging.getLogger('SoundClip')
 
 from gi.repository import Gtk, Gio, GObject
@@ -84,6 +86,7 @@ class SCHeaderBar(Gtk.HeaderBar):
         self.__panic_button.set_tooltip_text("PANIC: Stop all automations and cues")
         self.__panic_button.connect("clicked", self.on_panic)
         self.pack_end(self.__panic_button)
+        self.__last_panic_time = 0
 
     def on_workspace_lock_toggle(self, obj, lock):
         self.__add_cue_button.set_sensitive(not lock)
@@ -163,10 +166,10 @@ class SCHeaderBar(Gtk.HeaderBar):
         """
         p = self.__main_window.project
         ft = p.panic_fade_time
-        logger.warning("PANIC! Stopping all cues and automation over {0} ms".format(
-            self.__main_window.project.panic_fade_time
-        ))
-        self.__main_window.send_stop_all(fade=1000)
+        delta = now()-self.__last_panic_time
+        logger.warning("PANIC! Stopping all cues and automation over {0} ms. It has been {1}ms since the last panic".format(ft, delta))
+        self.__main_window.send_stop_all(fade=ft if delta > 1000 else 0)
+        self.__last_panic_time = delta
 
 
 class SCSettingsMenuModel(Gio.Menu):

@@ -111,6 +111,25 @@ class SCProjectPropertiesDialog(Gtk.Dialog):
         root_button.connect('clicked', self.on_root_button)
         grid.attach(root_button, 2, 3, 1, 1)
 
+        panic_fade_label = Gtk.Label("Panic Fade Time")
+        panic_fade_label.set_halign(Gtk.Align.END)
+        grid.attach(panic_fade_label, 0, 4, 1, 1)
+        self.__panic_fade_time = TimePicker(initial_milliseconds=self.__main_window.project.panic_fade_time)
+        self.__panic_fade_time.set_hexpand(True)
+        self.__panic_fade_time.set_halign(Gtk.Align.FILL)
+        grid.attach(self.__panic_fade_time, 1, 4, 1, 1)
+
+        panic_delta_label = Gtk.Label("Panic Hard-Stop Delta")
+        panic_delta_label.set_halign(Gtk.Align.END)
+        panic_delta_label.set_tooltip_text(
+            "Maximum time from clicking the panic button to count consecutive clicks as hard-stops"
+        )
+        grid.attach(panic_delta_label, 0, 5, 1, 1)
+        self.__panic_delta = TimePicker(initial_milliseconds=self.__main_window.project.panic_hard_stop_time)
+        self.__panic_delta.set_hexpand(True)
+        self.__panic_delta.set_halign(Gtk.Align.FILL)
+        grid.attach(self.__panic_delta, 1, 5, 1, 1)
+
         # TODO: Previous Revisions
 
         self.get_content_area().pack_start(grid, True, True, 0)
@@ -141,6 +160,8 @@ class SCProjectPropertiesDialog(Gtk.Dialog):
         if response == Gtk.ResponseType.OK:
             self.__main_window.project.name = self.__name.get_text()
             self.__main_window.project.creator = self.__creator.get_text()
+            self.__main_window.project.panic_fade_time = self.__panic_fade_time.get_total_milliseconds()
+            self.__main_window.project.panic_hard_stop_time = self.__panic_delta.get_total_milliseconds()
             if self.__main_window.project.root != self.__root.get_text():
                 self.__main_window.project.root = self.__root.get_text()
                 self.__main_window.project.store()

@@ -50,17 +50,19 @@ class Project(GObject.GObject):
     name = GObject.Property(type=str)
     creator = GObject.Property(type=str)
     panic_fade_time = GObject.property(type=GObject.TYPE_LONG)
+    panic_hard_stop_time = GObject.property(type=GObject.TYPE_LONG)
     current_hash = GObject.property(type=str)
     last_hash = GObject.property(type=str)
 
-    def __init__(self, name="Untitled Project", creator="", root="", panic_fade_time=500, cue_stacks=None,
-                 current_hash=None, last_hash=None):
+    def __init__(self, name="Untitled Project", creator="", root="", panic_fade_time=500, panic_hard_stop_time=1000,
+                 cue_stacks=None, current_hash=None, last_hash=None):
         GObject.GObject.__init__(self)
         self.name = name
         self.creator = creator
         self.__root = root
         self.cue_stacks = [CueStack(project=self), ] if cue_stacks is None else cue_stacks
         self.panic_fade_time = panic_fade_time
+        self.panic_hard_stop_time = panic_hard_stop_time
         self.current_hash = current_hash
         self.last_hash = last_hash
         self.__dirty = True
@@ -198,10 +200,11 @@ class Project(GObject.GObject):
         name = j['name'] if 'name' in j else "Untitled Project"
         creator = j['creator'] if 'creator' in j else ""
         panic_fade_time = j['panicFadeTime'] if 'panicFadeTime' in j else 500
+        panic_hard_stop_time = j['panicHardStopTime'] if 'panicHardStopTime' in j else 1000
         last_hash = j['previousRevision'] if 'previousRevision' in j else None
 
         p = Project(name=name, creator=creator, root=path, cue_stacks=[], panic_fade_time=panic_fade_time,
-                    current_hash=sha(content), last_hash=last_hash)
+                    panic_hard_stop_time=panic_hard_stop_time, current_hash=sha(content), last_hash=last_hash)
 
         if 'stacks' in j:
             for key in j['stacks']:
@@ -218,7 +221,8 @@ class Project(GObject.GObject):
         if not os.path.exists(self.__root) or not os.path.isdir(self.__root):
             os.makedirs(self.__root)
 
-        d = {'name': self.name, 'creator': self.creator, 'stacks': [], 'panicFadeTime': self.panic_fade_time}
+        d = {'name': self.name, 'creator': self.creator, 'stacks': [], 'panicFadeTime': self.panic_fade_time,
+             'panicHardStopTime': self.panic_hard_stop_time}
 
         for stack in self.cue_stacks:
             d['stacks'].append(stack.store(self.__root))
