@@ -389,6 +389,10 @@ class AudioCue(Cue):
             self.fade_in_time = w.get_fade_in_time()
             self.fade_out_time = w.get_fade_out_time()
 
+            # We need to preroll the playback controller in order to get the length of the audio file
+            self.__pbc.preroll()
+            self.__pbc.stop()
+
     def action(self):
         super().action()
 
