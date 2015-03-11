@@ -138,6 +138,19 @@ class Cue(GObject.GObject):
     def state(self):
         return PlaybackState.STOPPED
 
+    def validate(self):
+        """
+        Validate the cue. Cues that are valid should return `None` for this method. Cues with validation errors
+        should return a dictionary describing all errors. For example:
+
+        An audio cue file is missing:
+
+        {'Missing Target': "The audio file {0} could not be found."}
+
+        :return:
+        """
+        return None
+
     def load(self, root, key, j):
         """
         Completes the loading of this cue from the specified json dictionary. Make sure you chain up to this super
@@ -285,7 +298,14 @@ class AudioCue(Cue):
             if result == Gtk.ResponseType.OK:
                 p = dialog.get_filename()
 
-                if not util.in_directory(p, self.__root):
+                if not PlaybackController.is_file_supported(p):
+                    logger.warning("Unsupported File '{0}'".format(p))
+                    d = Gtk.MessageDialog(dialog, 0, Gtk.MessageType.ERROR, Gtk.ButtonsType.OK, "Unsupported File Type")
+                    d.format_secondary_text("'{0}' is not in a format supported by this system.".format(p))
+                    d.run()
+                    d.destroy()
+                    p = ""
+                elif not util.in_directory(p, self.__root):
                     logger.warning("The requested file '{0}' is not in the project root".format(p))
                     d = Gtk.MessageDialog(dialog, 0, Gtk.MessageType.WARNING, Gtk.ButtonsType.OK_CANCEL,
                                           "'{0}' is not in the project root!".format(p))
@@ -303,7 +323,7 @@ class AudioCue(Cue):
                         dialog.destroy()
                         return
 
-                r = os.path.relpath(p, start=self.__root)
+                r = os.path.relpath(p, start=self.__root) if p else ""
 
                 self.__source_entry.set_text(r)
             elif result == Gtk.ResponseType.CANCEL:
@@ -420,6 +440,19 @@ class AudioCue(Cue):
     def state(self):
         return PlaybackState.PLAYING if self.__pbc.playing else \
             PlaybackState.PAUSED if self.__pbc.paused else PlaybackState.STOPPED
+
+    def validate(self):
+        errors = {}
+
+        if not self.audio_source_uri:
+            errors['Missing File'] = "No audio file specified"
+        elif not os.path.exists(os.path.join(self._project.root, self.audio_source_uri)) and \
+                os.path.isfile(os.path.join(self._project.root, self.audio_source_uri)):
+            errors['Missing File'] = "{0} could not be found".format(self.audio_source_uri)
+        elif not PlaybackController.is_file_supported(os.path.join(self._project.root, self.audio_source_uri)):
+            errors['Unsupported File'] = "{0} is not a supported audio file".format(self.audio_source_uri)
+
+        return errors if errors else None
 
     def load(self, root, key, j):
         super().load(root, key, j)
@@ -666,6 +699,14 @@ class ControlCue(Cue):
     @GObject.property
     def target(self):
         return self.__target
+
+    def validate(self):
+        errors = {}
+
+        if self.__target.resolve(self._project) is None:
+            errors['No Target'] = "This cue has no target or the target it referenced no longer exists"
+
+        return errors if errors else None
 
     def load(self, root, key, j):
         super().load(root, key, j)

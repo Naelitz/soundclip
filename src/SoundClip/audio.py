@@ -19,7 +19,7 @@ gi.require_version('Gst', '1.0')
 import logging
 logger = logging.getLogger('SoundClip')
 
-from gi.repository import GLib, GObject, Gst
+from gi.repository import GLib, GObject, Gst, GstPbutils
 
 
 def fade_curve_linear(initial_vol, target_vol, start, duration, now, user_args):
@@ -33,8 +33,24 @@ class PlaybackController(GObject.Object):
     """
     Playback Controller for Audio Cues. Serves as a bridge between the cue and gstreamer.
 
+    # TODO: One pipeline for the whole program? Multiple volume sliders show up in gnome...
+
     uridecodebin -> audioconvert -> volume -> autoaudiosink
     """
+
+    discoverer = None
+
+    @staticmethod
+    def is_file_supported(uri):
+        if PlaybackController.discoverer is None:
+            PlaybackController.discoverer = GstPbutils.Discoverer()
+
+        try:
+            file = PlaybackController.discoverer.discover_uri("file://" + uri)
+            return len(file.get_audio_streams()) > 0
+        except GLib.Error as ex:
+            logger.warning("Cannot play audio file: {0}".format(ex.message))
+            return False
 
     __gsignals__ = {
         'playback-state-changed': (GObject.SIGNAL_RUN_FIRST, None, (GObject.TYPE_PYOBJECT, )),
