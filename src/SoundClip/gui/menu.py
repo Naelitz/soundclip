@@ -131,7 +131,7 @@ class SCHeaderBar(Gtk.HeaderBar):
             else:
                 logger.info("Saving new project to {0}".format(proj))
                 p = Project()
-                p.root = proj
+                p.change_root(proj)
                 self.__main_window.change_project(p)
                 # TODO: Project Properties window?
         elif result == Gtk.ResponseType.CANCEL:
@@ -151,7 +151,7 @@ class SCHeaderBar(Gtk.HeaderBar):
             if result == Gtk.ResponseType.OK:
                 root = dialog.get_filename()
                 logger.info("Saving to {0}".format(root))
-                self.__main_window.project.root = root
+                self.__main_window.project.change_root(root)
             elif result == Gtk.ResponseType.CANCEL:
                 logger.debug("CANCEL")
 

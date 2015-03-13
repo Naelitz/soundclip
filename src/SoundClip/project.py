@@ -113,10 +113,12 @@ class Project(GObject.GObject):
         return self.__root
 
     def change_root(self, path):
-        if self.__root is not None:
+        logger.debug("Current Root: {0}".format(self.__root))
+        if self.__root and self.__root != path:
             # TODO: Copy project if root is already set
             logger.warning("Need to copy project to new location!")
         else:
+            logger.debug("Setting new root {0}".format(path))
             self.__root = path
 
     def init_logfile(self):

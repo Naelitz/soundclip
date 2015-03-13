@@ -163,7 +163,7 @@ class SCProjectPropertiesDialog(Gtk.Dialog):
             self.__main_window.project.panic_fade_time = self.__panic_fade_time.get_total_milliseconds()
             self.__main_window.project.panic_hard_stop_time = self.__panic_delta.get_total_milliseconds()
             if self.__main_window.project.root != self.__root.get_text():
-                self.__main_window.project.root = self.__root.get_text()
+                self.__main_window.project.change_root(self.__root.get_text())
                 self.__main_window.project.store()
             self.__main_window.update_title()
 
