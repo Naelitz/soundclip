@@ -12,6 +12,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import gi
+from SoundClip import util
 from SoundClip.util import now
 
 gi.require_version('Gst', '1.0')
@@ -100,7 +101,12 @@ class PlaybackController(GObject.Object):
         self.__conv.link(self.__vol)
         self.__vol.link(self.__sink)
 
-        self.__duration = 0
+        if PlaybackController.discoverer is None:
+            PlaybackController.__setup_discoverer()
+
+        dur = int(PlaybackController.discoverer.discover_uri(source).get_duration() / Gst.MSECOND)
+        logger.debug("Discovered length {0}".format(util.timefmt(dur)))
+        self.__duration = dur
 
         # Schedule a tick on 50ms interval
         self.__active = True
@@ -126,7 +132,8 @@ class PlaybackController(GObject.Object):
         logger.debug("Playback Controller preroll")
         self.__pipeline.set_state(Gst.State.PAUSED)
         self.__pipeline.get_state(Gst.CLOCK_TIME_NONE)
-        self.__duration = int(self.__pipeline.query_duration(Gst.Format.TIME)[1] / Gst.MSECOND)
+        self.__duration = self.__duration if self.__duration > 0 else \
+            int(self.__pipeline.query_duration(Gst.Format.TIME)[1] / Gst.MSECOND)
 
     def play(self, volume=1.0, fade=0):
         logger.debug("Playback Controller play ({0})".format("Fade={0}".format(fade) if fade > 0 else "Not Fading"))
