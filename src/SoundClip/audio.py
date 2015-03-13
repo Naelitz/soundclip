@@ -41,9 +41,13 @@ class PlaybackController(GObject.Object):
     discoverer = None
 
     @staticmethod
-    def is_file_supported(uri):
+    def __setup_discoverer():
         if PlaybackController.discoverer is None:
             PlaybackController.discoverer = GstPbutils.Discoverer()
+
+    @staticmethod
+    def is_file_supported(uri):
+        PlaybackController.__setup_discoverer()
 
         try:
             file = PlaybackController.discoverer.discover_uri("file://" + uri)
@@ -125,7 +129,7 @@ class PlaybackController(GObject.Object):
         self.__duration = int(self.__pipeline.query_duration(Gst.Format.TIME)[1] / Gst.MSECOND)
 
     def play(self, volume=1.0, fade=0):
-        logger.debug("Playback Controller play")
+        logger.debug("Playback Controller play ({0})".format("Fade={0}".format(fade) if fade > 0 else "Not Fading"))
 
         if fade > 0:
             self.__vol.set_property('volume', 0.0)
@@ -133,6 +137,7 @@ class PlaybackController(GObject.Object):
         else:
             self.__vol.set_property('volume', volume)
             self.__fade_target_volume = volume
+            self.__fading = False
 
         self.__pipeline.set_state(Gst.State.PLAYING)
 
