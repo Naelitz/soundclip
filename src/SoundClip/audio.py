@@ -35,8 +35,9 @@ class PlaybackController(GObject.Object):
     Playback Controller for Audio Cues. Serves as a bridge between the cue and gstreamer.
 
     # TODO: One pipeline for the whole program? Multiple volume sliders show up in gnome...
+    # TODO: Optional ReplayGain instead of forced
 
-    uridecodebin -> audioconvert -> volume -> autoaudiosink
+    uridecodebin -> audioconvert -> rgvolume -> volume -> autoaudiosink
     """
 
     discoverer = None
@@ -90,15 +91,18 @@ class PlaybackController(GObject.Object):
         self.__dec.connect('drained', lambda *x: GLib.idle_add(self.on_drained))
         self.__conv = Gst.ElementFactory.make('audioconvert', None)
         self.__conv_sink = self.__conv.get_static_pad('sink')
+        self.__rgvol = Gst.ElementFactory.make('rgvolume', None)
         self.__vol = Gst.ElementFactory.make('volume', None)
         self.__sink = Gst.ElementFactory.make('autoaudiosink', None)
 
         self.__pipeline.add(self.__dec)
         self.__pipeline.add(self.__conv)
+        self.__pipeline.add(self.__rgvol)
         self.__pipeline.add(self.__vol)
         self.__pipeline.add(self.__sink)
 
-        self.__conv.link(self.__vol)
+        self.__conv.link(self.__rgvol)
+        self.__rgvol.link(self.__vol)
         self.__vol.link(self.__sink)
 
         if PlaybackController.discoverer is None:
