@@ -377,6 +377,16 @@ class AudioCue(Cue):
     def audio_source_uri(self):
         return self.__src
 
+    def seek(self, ms):
+        target = self.elapsed + ms
+        if target < 0:
+            self.__pbc.seek(0)
+        elif target > self.duration:
+            self.stop()
+        else:
+            self.__pbc.seek(target)
+        self.emit('update')
+
     def __update_func(self):
         self.emit('update')
         return self.__pbc.playing
@@ -928,6 +938,18 @@ class CueStack(GObject.GObject):
         self.name = name
         self.emit('renamed', name)
         logger.debug("CueList renamed to {0}".format(name))
+
+    def try_seek_all(self, ms):
+        for cue in [c for c in self.__cues if c.state is not PlaybackState.STOPPED and isinstance(c, AudioCue)]:
+            cue.seek(ms)
+
+    def resume_all(self, fade=0):
+        for cue in [c for c in self.__cues if c.state is PlaybackState.PAUSED]:
+            cue.action()
+
+    def pause_all(self, fade=0):
+        for cue in [c for c in self.__cues if c.state is PlaybackState.PLAYING and isinstance(c, AudioCue)]:
+            cue.pause()
 
     def stop_all(self, fade=0):
         for cue in self.__cues:

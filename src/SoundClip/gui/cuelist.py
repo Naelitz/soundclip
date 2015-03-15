@@ -329,6 +329,7 @@ class SCCueList(Gtk.ScrolledWindow):
         self.__tree_view.set_grid_lines(Gtk.TreeViewGridLines.BOTH)
         self.__tree_view.connect('key-release-event', self.on_key)
         self.__tree_view.connect('button-press-event', self.on_click)
+        self.__tree_view.connect('cursor-changed', self.on_selection_changed)
 
         self.add(self.__tree_view)
 
@@ -338,7 +339,6 @@ class SCCueList(Gtk.ScrolledWindow):
         (model, pathlist) = self.__tree_view.get_selection().get_selected_rows()
         if not pathlist:
             return None
-        logger.debug("Getting Cue")
         return self.__model.get_cue_at(pathlist[0])
 
     def get_title_widget(self):
@@ -351,6 +351,10 @@ class SCCueList(Gtk.ScrolledWindow):
     def select_next(self):
         (model, pathlist) = self.__tree_view.get_selection().get_selected_rows()
         self.__tree_view.set_cursor(Gtk.TreePath(pathlist[0].get_indices()[0]+1), None, False)
+
+    def on_selection_changed(self, view):
+        cue = self.get_selected()
+        self.__main_window.update_notes(cue)
 
     def on_rename(self, obj, name):
         self.__title_widget.set_text(name)

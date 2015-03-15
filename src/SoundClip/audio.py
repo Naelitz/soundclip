@@ -127,9 +127,13 @@ class PlaybackController(GObject.Object):
             logger.debug("Linking Pad: {0}".format(name))
             pad.link(self.__conv_sink)
 
+    def seek(self, ms):
+        logger.debug("Playback Controller seek to {0}".format(ms))
+        self.__pipeline.seek_simple(Gst.Format.TIME, Gst.SeekFlags.FLUSH | Gst.SeekFlags.KEY_UNIT, ms * 1000000)
+
     def reset(self):
         logger.debug("Playback Controller Reset")
-        self.__pipeline.seek_simple(Gst.Format.TIME, Gst.SeekFlags.FLUSH | Gst.SeekFlags.KEY_UNIT, 0)
+        self.seek(0)
         self.__pipeline.set_state(Gst.State.READY)
 
     def preroll(self):

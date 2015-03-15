@@ -12,6 +12,8 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import logging
+from SoundClip.gui.widgets import TransportControls
+
 logger = logging.getLogger('SoundClip')
 
 from gi.repository import GObject, Gtk
@@ -39,8 +41,15 @@ class SCMainWindow(Gtk.Window):
 
         # TODO: Current cue name, description, notes, and go button?
 
+        grid = Gtk.Grid()
+
         self.__cue_lists = SCCueListContainer(self)
-        self.add(self.__cue_lists)
+        grid.attach(self.__cue_lists, 0, 0, 1, 1)
+
+        self.__transport_controls = TransportControls(self)
+        grid.attach(self.__transport_controls, 0, 1, 1, 1)
+
+        self.add(grid)
 
         self.__project = Project() if project is None else project
         self.change_project(self.__project)
@@ -71,9 +80,24 @@ class SCMainWindow(Gtk.Window):
             self.title_bar.set_title(self.__project.name)
             self.title_bar.set_subtitle(self.__project.root)
 
+    def update_notes(self, cue):
+        self.__transport_controls.set_notes(cue.notes)
+
     @property
     def project(self):
         return self.__project
+
+    def try_seek_all(self, ms):
+        for stack in self.__project.cue_stacks:
+            stack.try_seek_all(ms)
+
+    def send_pause_all(self, fade=0):
+        for stack in self.__project.cue_stacks:
+            stack.pause_all(fade=fade)
+
+    def send_resume_all(self, fade=0):
+        for stack in self.__project.cue_stacks:
+            stack.resume_all(fade=fade)
 
     def send_stop_all(self, fade=0):
         for stack in self.__project.cue_stacks:
