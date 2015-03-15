@@ -1,7 +1,7 @@
 # SoundClip
 Simple sound cue management for linux (Like [Q-Lab (Mac OS X)](http://figure53.com/qlab/) or [MultiPlay (Windows)](http://www.da-share.com/software/multiplay/))
 
-![](http://techwiz24.github.io/soundclip/2015/01/15/Lists-and-Dialogs/about.png)
+![](http://techwiz24.github.io/soundclip/2015/03/15/Sound-Standing-By/gui.png)
 
 ## Project Status
 SoundClip is currently under heavy, active development in an attempt to have it reliable enough to be used in a production
