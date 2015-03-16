@@ -40,12 +40,18 @@ class PlaybackController(GObject.Object):
     uridecodebin -> audioconvert -> rgvolume -> volume -> autoaudiosink
     """
 
+    async_discoverer = None
     discoverer = None
 
     @staticmethod
     def __setup_discoverer():
         if PlaybackController.discoverer is None:
             PlaybackController.discoverer = GstPbutils.Discoverer()
+        if PlaybackController.async_discoverer is None:
+            PlaybackController.async_discoverer = GstPbutils.Discoverer()
+            PlaybackController.async_discoverer.start()
+            PlaybackController.async_discoverer.connect('starting', lambda *x: logger.debug("Async Discoverer starting"))
+            PlaybackController.async_discoverer.connect('finished', lambda *x: logger.debug("Async Discoverer Finished"))
 
     @staticmethod
     def is_file_supported(uri):
@@ -59,11 +65,12 @@ class PlaybackController(GObject.Object):
             return False
 
     __gsignals__ = {
+        'duration-discovered': (GObject.SIGNAL_RUN_FIRST, None, (int,)),
         'playback-state-changed': (GObject.SIGNAL_RUN_FIRST, None, (GObject.TYPE_PYOBJECT, )),
         'tick': (GObject.SIGNAL_RUN_FIRST, None, ())
     }
 
-    def __init__(self, source, target_volume=1.0, **properties):
+    def __init__(self, source, target_volume=1.0, postpone_duration_discovery=False, **properties):
         super().__init__(**properties)
 
         logger.debug("Initializing to source {0}".format(source))
@@ -105,12 +112,18 @@ class PlaybackController(GObject.Object):
         self.__rgvol.link(self.__vol)
         self.__vol.link(self.__sink)
 
-        if PlaybackController.discoverer is None:
+        if PlaybackController.async_discoverer is None:
             PlaybackController.__setup_discoverer()
 
-        dur = int(PlaybackController.discoverer.discover_uri(source).get_duration() / Gst.MSECOND)
-        logger.debug("Discovered length {0}".format(util.timefmt(dur)))
-        self.__duration = dur
+        if not postpone_duration_discovery:
+            dur = int(PlaybackController.discoverer.discover_uri(source).get_duration() / Gst.MSECOND)
+            logger.debug("Discovered length {0}".format(util.timefmt(dur)))
+            self.__duration = dur
+        else:
+            logger.debug("Postponing duration discovery")
+            self.__did = PlaybackController.async_discoverer.connect('discovered', self.__discoverer_async_callback)
+            PlaybackController.async_discoverer.discover_uri_async(source)
+            self.__duration = 0
 
         # Schedule a tick on 50ms interval
         self.__active = True
@@ -118,8 +131,19 @@ class PlaybackController(GObject.Object):
         self.__last_update_time = 0
 
     def __del__(self):
+        PlaybackController.async_discoverer.disconnect(self.__did)
         self.__pipeline.set_state(Gst.State.NULL)
         self.__active = False
+
+    def __discoverer_async_callback(self, discoverer, info, error):
+        if info.get_uri() == self.__source:
+            if error:
+                logger.error("Error during discovery: {0}".format(error))
+            else:
+                dur = int(info.get_duration() / Gst.MSECOND)
+                logger.debug("Discovered length {0} for {1}".format(util.timefmt(dur), self.__source))
+                self.__duration = dur
+                self.emit('duration-discovered', dur)
 
     def __on_decoded_pad(self, element, pad):
         name = pad.query_caps(None).to_string()

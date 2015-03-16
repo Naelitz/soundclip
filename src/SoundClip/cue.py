@@ -356,7 +356,8 @@ class AudioCue(Cue):
     fade_out_time = GObject.Property(type=GObject.TYPE_LONG, default=0)
 
     def __init__(self, project, name="Untitled Cue", description="", notes="", number=-1.0, pre_wait=0, post_wait=0,
-                 audio_source_uri="", pitch=0, pan=0, gain=0, fade_in_time=0, fade_out_time=0):
+                 audio_source_uri="", pitch=0, pan=0, gain=0, fade_in_time=0, fade_out_time=0,
+                 postpone_duration_discovery=False):
         super().__init__(project, name, description, notes, number, pre_wait, post_wait)
 
         logger.debug("Init Audio Cue")
@@ -367,8 +368,11 @@ class AudioCue(Cue):
         self.gain = gain
         self.fade_in_time = fade_in_time
         self.fade_out_time = fade_out_time
+        self.__duration_hint = 0
+        self.__ddid = None
         if os.path.isfile(os.path.abspath(os.path.join(project.root, self.__src))):
-            self.__pbc = PlaybackController("file://" + os.path.abspath(os.path.join(project.root, self.__src)))
+            self.__pbc = PlaybackController("file://" + os.path.abspath(os.path.join(project.root, self.__src)),
+                                            postpone_duration_discovery=postpone_duration_discovery)
             self.__pbc.preroll()
         else:
             self.__pbc = None
@@ -391,21 +395,35 @@ class AudioCue(Cue):
         self.emit('update')
         return self.__pbc.playing
 
-    def change_source(self, src):
+    def change_source(self, src, postpone_duration_discovery=False):
         self.__src = src
         logger.debug("Audio source changed for {0} to {1}, changing playback controller".format(self.name, src))
         if self.__pbc is not None and self.__pbc.playing:
             self.__pbc.stop()
-        self.__pbc = PlaybackController("file://" + os.path.abspath(os.path.join(self._project.root, src)))
+        if self.__ddid is not None:
+            self.__pbc.disconnect(self.__ddid)
+        self.__pbc = PlaybackController("file://" + os.path.abspath(os.path.join(self._project.root, src)),
+                                        postpone_duration_discovery=postpone_duration_discovery)
+        if not postpone_duration_discovery:
+            self.__duration_hint = self.__pbc.get_duration()
+        self.__ddid = self.__pbc.connect('duration-discovered', self.on_pbc_duration_discovered)
         self.__pbc.preroll()
 
     @GObject.Property
     def duration(self):
-        return self.__pbc.get_duration()
+        return self.__duration_hint
 
     @GObject.property
     def elapsed(self):
         return self.__pbc.get_position()
+
+    def on_pbc_duration_discovered(self, pbc, duration):
+        if duration != self.__duration_hint:
+            logger.warning("WARNING: Audio file may have changed on disk for {0}: Duration was {1}, got {2}".format(
+                self.__src, util.timefmt(self.__duration_hint), util.timefmt(duration)
+            ))
+        self.__duration_hint = duration
+        self.emit('update')
 
     def get_editor(self):
         return AudioCue.Editor(self, self._project.root)
@@ -467,7 +485,7 @@ class AudioCue(Cue):
     def load(self, root, key, j):
         super().load(root, key, j)
 
-        self.change_source(j['src'] if 'src' in j else "")
+        self.change_source(j['src'] if 'src' in j else "", postpone_duration_discovery=True)
 
         if not os.path.exists(os.path.join(root, self.audio_source_uri)):
             logger.warning("Audio file does not exists in project root!")
@@ -481,6 +499,7 @@ class AudioCue(Cue):
         self.gain = float(util.pick(j, 'gain', 0.0))
         self.fade_in_time = int(util.pick(j, 'fadeInTime', 0))
         self.fade_out_time = int(util.pick(j, 'fadeOutTime', 0))
+        self.__duration_hint = int(util.pick(j, 'durationHint', 0))
 
         return self
 
@@ -491,6 +510,7 @@ class AudioCue(Cue):
         d['gain'] = self.gain
         d['fadeInTime'] = self.fade_in_time
         d['fadeOutTime'] = self.fade_out_time
+        d['durationHint'] = self.__duration_hint
         d['type'] = 'audio'
 
         return super().store(root, d)
@@ -786,7 +806,7 @@ def load_cue(root, key, project):
     t = j['type'] if 'type' in j else 'unknown'
     logger.debug("Trying to load {0} which is of type {1}".format(key, t))
     if t == 'audio':
-        ret = AudioCue(project=project).load(root, key, j)
+        ret = AudioCue(project=project, postpone_duration_discovery=True).load(root, key, j)
     elif t == 'control':
         ret = ControlCue(project=project, target=None, target_volume=0.0, fade_duration=0,
                          stop_target_on_volume_reached=True).load(root, key, j)

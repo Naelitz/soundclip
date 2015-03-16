@@ -60,8 +60,8 @@ def main():
         logger.info("Trying to load project from {0}".format(args.project))
         try:
             p = Project.load(args.project)
-        except:
-            logger.warn("Unable to load project at {0}".format(args.project))
+        except Exception as ex:
+            logger.warn("Unable to load project at {0}: {1}".format(args.project, ex))
             p = None
             d = Gtk.MessageDialog(None, 0, Gtk.MessageType.WARNING, Gtk.ButtonsType.OK, "Project Not Found")
             d.format_secondary_text("The project at {0} could not be found or is corrupt.".format(args.project))
