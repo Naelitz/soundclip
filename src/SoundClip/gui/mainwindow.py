@@ -83,6 +83,9 @@ class SCMainWindow(Gtk.Window):
     def update_notes(self, cue):
         self.__transport_controls.set_notes(cue.notes)
 
+    def refocus_cuelist(self):
+        self.__cue_lists.get_nth_page(self.__cue_lists.get_current_page()).refocus()
+
     @property
     def project(self):
         return self.__project

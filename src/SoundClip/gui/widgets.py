@@ -153,9 +153,11 @@ class TransportControls(Gtk.Grid):
             self.__main_window.try_seek_all(15000)
         elif button is self.__seek_forward_large:
             self.__main_window.try_seek_all(30000)
+        self.__main_window.refocus_cuelist()
     
     def on_playback_state(self, button):
         if button is self.__pause_all:
             self.__main_window.send_pause_all()
         elif button is self.__resume_all:
             self.__main_window.send_resume_all()
+        self.__main_window.refocus_cuelist()

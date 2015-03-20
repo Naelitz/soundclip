@@ -92,6 +92,7 @@ class SCHeaderBar(Gtk.HeaderBar):
         self.__add_cue_button.set_sensitive(not lock)
         self.__open_button.set_sensitive(not lock)
         self.__new_project_button.set_sensitive(not lock)
+        self.__main_window.refocus_cuelist()
 
     def on_open_project(self, button):
         # TODO: Save existing project if needed
@@ -159,6 +160,7 @@ class SCHeaderBar(Gtk.HeaderBar):
 
         self.__main_window.project.store()
         self.__main_window.update_title()
+        self.__main_window.refocus_cuelist()
 
     def on_panic(self, button):
         """
@@ -170,6 +172,7 @@ class SCHeaderBar(Gtk.HeaderBar):
         logger.warning("PANIC! Stopping all cues and automation over {0} ms. It has been {1}ms since the last panic".format(ft, delta))
         self.__main_window.send_stop_all(fade=ft if delta > 1000 else 0)
         self.__last_panic_time = delta
+        self.__main_window.refocus_cuelist()
 
 
 class SCSettingsMenuModel(Gio.Menu):

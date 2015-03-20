@@ -12,8 +12,9 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import json
-from logging.handlers import RotatingFileHandler
 import os
+
+from logging.handlers import RotatingFileHandler
 import logging
 logger = logging.getLogger('SoundClip')
 

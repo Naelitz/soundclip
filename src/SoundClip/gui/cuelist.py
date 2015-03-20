@@ -333,6 +333,9 @@ class SCCueList(Gtk.ScrolledWindow):
 
         self.add(self.__tree_view)
 
+    def refocus(self):
+        self.__tree_view.grab_focus()
+
     def get_selected(self):
         if len(self.__cue_list) <= 0:
             return None
