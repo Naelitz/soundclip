@@ -31,14 +31,14 @@ class TimePicker(Gtk.Box):
         self.pack_start(self.__minute_button, True, True, 0)
         self.pack_start(Gtk.Label("minutes, "), False, False, 5)
 
-        self.__second_adjustment = Gtk.Adjustment(0, 0, 59, 1, 1, 1)
+        self.__second_adjustment = Gtk.Adjustment(0, 0, 60, 1, 1, 1)
         self.__second_button = Gtk.SpinButton()
         self.__second_button.set_adjustment(self.__second_adjustment)
         self.__second_button.set_value(ss)
         self.pack_start(self.__second_button, True, True, 0)
         self.pack_start(Gtk.Label("seconds, "), False, False, 5)
 
-        self.__millisecond_adjustment = Gtk.Adjustment(0, 0, 999, 1, 1, 1)
+        self.__millisecond_adjustment = Gtk.Adjustment(0, 0, 1000, 1, 1, 1)
         self.__millisecond_button = Gtk.SpinButton()
         self.__millisecond_button.set_adjustment(self.__millisecond_adjustment)
         self.__millisecond_button.set_value(ms)

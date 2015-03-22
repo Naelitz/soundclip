@@ -112,6 +112,14 @@ class PlaybackController(GObject.Object):
         self.__rgvol.link(self.__vol)
         self.__vol.link(self.__sink)
 
+        self.__vamping = False
+        self.__vamp_released = False
+        self.__vamp_start = -1
+        self.__vamp_end = -1
+        self.__vamp_clock_id = 0
+        self.__vamp_count = 0
+        self.__vamp_max_count = -1
+
         if PlaybackController.async_discoverer is None:
             PlaybackController.__setup_discoverer()
 
@@ -151,6 +159,43 @@ class PlaybackController(GObject.Object):
             logger.debug("Linking Pad: {0}".format(name))
             pad.link(self.__conv_sink)
 
+    def vamp(self, start, end, count=-1):
+        logger.debug("[{0}] Scheduling vamp".format(util.timefmt(self.get_position())))
+
+        self.__vamp_clock_id = self.__pipeline.get_clock().new_periodic_id(
+            self.__pipeline.get_clock().get_time() + end,
+            end - start
+        )
+
+        self.__vamp_start = start
+        self.__vamp_end = end
+        self.__vamp_count = 0
+        self.__vamp_max_count = count
+        self.__vamping = True
+
+        def __do_vamp__(clock, time, id, user_data):
+            if self.__vamping and not (0 <= self.__vamp_max_count <= self.__vamp_count):
+                logger.debug("[{0}] Seeking to {1} and vamping until {2}{3}".format(
+                    util.timefmt(self.get_position()), start, end,
+                    " ({0} of {1})".format(
+                        self.__vamp_count, self.__vamp_max_count
+                    ) if self.__vamp_max_count >= 0 else ""
+                ))
+
+                self.__pipeline.seek_simple(
+                    Gst.Format.TIME, Gst.SeekFlags.FLUSH | Gst.SeekFlags.KEY_UNIT, self.__vamp_start
+                )
+
+                self.__vamp_count += 1
+            else:
+                logger.debug("[{0}] Vamp released, unscheduling clock".format(util.timefmt(self.get_position())))
+                self.__pipeline.get_clock().id_unschedule(self.__vamp_clock_id)
+
+        self.__pipeline.get_clock().id_wait_async(self.__vamp_clock_id, __do_vamp__, None)
+
+    def release_vamp(self):
+        self.__vamping = False
+
     def seek(self, ms):
         logger.debug("Playback Controller seek to {0}".format(ms))
         self.__pipeline.seek_simple(Gst.Format.TIME, Gst.SeekFlags.FLUSH | Gst.SeekFlags.KEY_UNIT, ms * 1000000)
@@ -158,6 +203,7 @@ class PlaybackController(GObject.Object):
     def reset(self):
         logger.debug("Playback Controller Reset")
         self.seek(0)
+        self.__vamping = False
         self.__pipeline.set_state(Gst.State.READY)
 
     def preroll(self):

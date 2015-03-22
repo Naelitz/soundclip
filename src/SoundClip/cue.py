@@ -21,7 +21,7 @@ from SoundClip.util import Timer
 logger = logging.getLogger('SoundClip')
 
 from enum import Enum
-from gi.repository import GLib, GObject, Gtk
+from gi.repository import GLib, GObject, Gtk, Gst
 
 from SoundClip import storage, util
 from SoundClip.exception import SCException
@@ -243,48 +243,77 @@ class AudioCue(Cue):
             source_button.connect('clicked', self.on_source)
             self.attach(source_button, 2, 0, 1, 1)
 
+            self.__enable_vamp = Gtk.CheckButton.new_with_label("Vamp At")
+            self.__enable_vamp.set_active(cue.vamp_at >= 0)
+            self.__enable_vamp.set_halign(Gtk.Align.END)
+            self.__enable_vamp.set_hexpand(True)
+            self.attach(self.__enable_vamp, 0, 1, 1, 1)
+            self.__vamp_at = TimePicker(initial_milliseconds=cue.vamp_at if cue.vamp_at > -1 else 0)
+            self.__vamp_at.set_hexpand(True)
+            self.__vamp_at.set_halign(Gtk.Align.FILL)
+            self.attach(self.__vamp_at, 1, 1, 2, 1)
+
+            to_label = Gtk.Label("Back To")
+            to_label.set_halign(Gtk.Align.END)
+            self.attach(to_label, 0, 2, 1, 1)
+            self.__vamp_to = TimePicker(initial_milliseconds=cue.vamp_to if cue.vamp_at > -1 else 0)
+            self.__vamp_to.set_hexpand(True)
+            self.__vamp_to.set_halign(Gtk.Align.FILL)
+            self.attach(self.__vamp_to, 1, 2, 2, 1)
+
+            self.__limit_vamp_count = Gtk.CheckButton.new_with_label("Repeat")
+            self.__limit_vamp_count.set_active(cue.vamp_count > 0)
+            self.__limit_vamp_count.set_hexpand(True)
+            self.__limit_vamp_count.set_halign(Gtk.Align.END)
+            self.attach(self.__limit_vamp_count, 0, 3, 1, 1)
+            self.__vamp_count = Gtk.SpinButton.new_with_range(min=0, max=999999, step=1)
+            self.__vamp_count.set_value(cue.vamp_count)
+            self.__vamp_count.set_hexpand(True)
+            self.__vamp_count.set_halign(Gtk.Align.FILL)
+            self.attach(self.__vamp_count, 1, 3, 2, 1)
+
             pitch_label = Gtk.Label("Pitch Adjustment:")
             pitch_label.set_halign(Gtk.Align.END)
-            self.attach(pitch_label, 0, 1, 1, 1)
+            self.attach(pitch_label, 0, 4, 1, 1)
             self.__pitch_scale = Gtk.Scale.new_with_range(Gtk.Orientation.HORIZONTAL, -1.0, 1.0, 0.1)
             self.__pitch_scale.set_value(cue.pitch)
             self.__pitch_scale.set_hexpand(True)
             self.__pitch_scale.set_halign(Gtk.Align.FILL)
-            self.attach(self.__pitch_scale, 1, 1, 2, 1)
+            self.attach(self.__pitch_scale, 1, 4, 2, 1)
 
             pan_adjustment = Gtk.Label("Pan Adjustment:")
             pan_adjustment.set_halign(Gtk.Align.END)
-            self.attach(pan_adjustment, 0, 2, 1, 1)
+            self.attach(pan_adjustment, 0, 5, 1, 1)
             self.__pan_scale = Gtk.Scale.new_with_range(Gtk.Orientation.HORIZONTAL, -1.0, 1.0, 0.1)
             self.__pan_scale.set_value(cue.pan)
             self.__pan_scale.set_hexpand(True)
             self.__pan_scale.set_halign(Gtk.Align.FILL)
-            self.attach(self.__pan_scale, 1, 2, 2, 1)
+            self.attach(self.__pan_scale, 1, 5, 2, 1)
 
             gain_label = Gtk.Label("Gain Adjustment:")
             gain_label.set_halign(Gtk.Align.END)
-            self.attach(gain_label, 0, 3, 1, 1)
+            self.attach(gain_label, 0, 6, 1, 1)
             self.__gain_scale = Gtk.Scale.new_with_range(Gtk.Orientation.HORIZONTAL, -1.0, 1.0, 0.1)
             self.__gain_scale.set_value(cue.gain)
             self.__gain_scale.set_hexpand(True)
             self.__gain_scale.set_halign(Gtk.Align.FILL)
-            self.attach(self.__gain_scale, 1, 3, 2, 1)
+            self.attach(self.__gain_scale, 1, 6, 2, 1)
 
             fade_in_label = Gtk.Label("Fade In Time:")
             fade_in_label.set_halign(Gtk.Align.END)
-            self.attach(fade_in_label, 0, 4, 1, 1)
+            self.attach(fade_in_label, 0, 7, 1, 1)
             self.__fade_in_time_picker = TimePicker(cue.fade_in_time)
             self.__fade_in_time_picker.set_hexpand(True)
             self.__fade_in_time_picker.set_halign(Gtk.Align.FILL)
-            self.attach(self.__fade_in_time_picker, 1, 4, 2, 1)
+            self.attach(self.__fade_in_time_picker, 1, 7, 2, 1)
 
             fade_out_label = Gtk.Label("Fade Out Time:")
             fade_out_label.set_halign(Gtk.Align.END)
-            self.attach(fade_out_label, 0, 5, 1, 1)
+            self.attach(fade_out_label, 0, 8, 1, 1)
             self.__fade_out_time_picker = TimePicker(cue.fade_out_time)
             self.__fade_out_time_picker.set_hexpand(True)
             self.__fade_out_time_picker.set_halign(Gtk.Align.FILL)
-            self.attach(self.__fade_out_time_picker, 1, 5, 2, 1)
+            self.attach(self.__fade_out_time_picker, 1, 8, 2, 1)
 
         def on_source(self, button):
             dialog = Gtk.FileChooserDialog("Select Audio File",
@@ -331,33 +360,32 @@ class AudioCue(Cue):
 
             dialog.destroy()
 
-        def get_source(self):
-            return self.__source_entry.get_text()
-
-        def get_pitch(self):
-            return self.__pitch_scale.get_value()
-
-        def get_pan(self):
-            return self.__pan_scale.get_value()
-
-        def get_gain(self):
-            return self.__gain_scale.get_value()
-
-        def get_fade_in_time(self):
-            return self.__fade_in_time_picker.get_total_milliseconds()
-
-        def get_fade_out_time(self):
-            return self.__fade_out_time_picker.get_total_milliseconds()
+        def pack(self):
+            return {
+                'source': self.__source_entry.get_text(),
+                'pitch': self.__pitch_scale.get_value(),
+                'pan': self.__pan_scale.get_value(),
+                'gain': self.__gain_scale.get_value(),
+                'fadeInTime': self.__fade_in_time_picker.get_total_milliseconds(),
+                'fadeOutTime': self.__fade_out_time_picker.get_total_milliseconds(),
+                'vampAt': self.__vamp_at.get_total_milliseconds() if self.__enable_vamp.get_active() else -1,
+                'vampTo': self.__vamp_to.get_total_milliseconds() if self.__enable_vamp.get_active() else -1,
+                'vampCount': self.__vamp_count.get_value() if self.__enable_vamp.get_active() and
+                                                              self.__limit_vamp_count.get_active() else -1
+            }
 
     pitch = GObject.Property(type=float, minimum=-1.0, maximum=1.0)
     pan = GObject.Property(type=float, minimum=-1.0, maximum=1.0)
     gain = GObject.Property(type=float, minimum=-1.0, maximum=1.0)
     fade_in_time = GObject.Property(type=GObject.TYPE_LONG, default=0)
     fade_out_time = GObject.Property(type=GObject.TYPE_LONG, default=0)
+    vamp_at = GObject.Property(type=GObject.TYPE_LONG, default=-1)
+    vamp_to = GObject.Property(type=GObject.TYPE_LONG, default=-1)
+    vamp_count = GObject.Property(type=int, default=-1)
 
     def __init__(self, project, name="Untitled Cue", description="", notes="", number=-1.0, pre_wait=0, post_wait=0,
                  audio_source_uri="", pitch=0, pan=0, gain=0, fade_in_time=0, fade_out_time=0,
-                 postpone_duration_discovery=False):
+                 postpone_duration_discovery=False, vamp_at=-1, vamp_to=-1, vamp_count=-1):
         super().__init__(project, name, description, notes, number, pre_wait, post_wait)
 
         logger.debug("Init Audio Cue")
@@ -368,6 +396,9 @@ class AudioCue(Cue):
         self.gain = gain
         self.fade_in_time = fade_in_time
         self.fade_out_time = fade_out_time
+        self.vamp_at = vamp_at
+        self.vamp_to = vamp_to
+        self.vamp_count = vamp_count
         self.__duration_hint = 0
         self.__ddid = None
         if os.path.isfile(os.path.abspath(os.path.join(project.root, self.__src))):
@@ -430,21 +461,32 @@ class AudioCue(Cue):
 
     def on_editor_closed(self, w, save=True):
         if save:
-            self.change_source(w.get_source())
-            self.pitch = w.get_pitch()
-            self.pan = w.get_pan()
-            self.gain = w.get_gain()
-            self.fade_in_time = w.get_fade_in_time()
-            self.fade_out_time = w.get_fade_out_time()
+            data = w.pack()
+            self.change_source(data['source'])
+            self.pitch = data['pitch']
+            self.pan = data['pan']
+            self.gain = data['gain']
+            self.fade_in_time = data['fadeInTime']
+            self.fade_out_time = data['fadeOutTime']
+            self.vamp_at = data['vampAt']
+            self.vamp_to = data['vampTo']
+            self.vamp_count = data['vampCount']
 
             # We need to preroll the playback controller in order to get the length of the audio file
             self.__pbc.preroll()
             self.__pbc.stop()
 
+    def release_vamp(self):
+        self.__pbc.release_vamp()
+
     def action(self):
         super().action()
 
         self.__pbc.play(fade=self.fade_in_time)
+
+        if self.vamp_at > self.vamp_to > -1:
+            self.__pbc.vamp(self.vamp_to * Gst.MSECOND, self.vamp_at * Gst.MSECOND, self.vamp_count)
+
         self.emit('update')
         GLib.timeout_add(__PROGRESS_UPDATE_INTERVAL__, self.__update_func)
 
@@ -499,6 +541,9 @@ class AudioCue(Cue):
         self.gain = float(util.pick(j, 'gain', 0.0))
         self.fade_in_time = int(util.pick(j, 'fadeInTime', 0))
         self.fade_out_time = int(util.pick(j, 'fadeOutTime', 0))
+        self.vamp_at = int(util.pick(j, 'vampAt', -1))
+        self.vamp_to = int(util.pick(j, 'vampTo', -1))
+        self.vamp_count = int(util.pick(j, 'vampCount', -1))
         self.__duration_hint = int(util.pick(j, 'durationHint', 0))
 
         return self
@@ -510,6 +555,9 @@ class AudioCue(Cue):
         d['gain'] = self.gain
         d['fadeInTime'] = self.fade_in_time
         d['fadeOutTime'] = self.fade_out_time
+        d['vampAt'] = self.vamp_at
+        d['vampTo'] = self.vamp_to
+        d['vampCount'] = self.vamp_count
         d['durationHint'] = self.__duration_hint
         d['type'] = 'audio'
 
