@@ -12,11 +12,10 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import logging
-from SoundClip.gui.widgets import TimePicker
-
 logger = logging.getLogger('SoundClip')
 
 import SoundClip
+from SoundClip.gui.widgets import TimePicker
 from SoundClip.util import get_gtk_version
 from gi.repository import Gtk, Gdk, Gst
 
@@ -196,48 +195,57 @@ class SCCueDialog(Gtk.Dialog):
         grid.set_vexpand(True)
         grid.set_valign(Gtk.Align.FILL)
 
+        id_label = Gtk.Label("Cue ID")
+        id_label.set_halign(Gtk.Align.END)
+        grid.attach(id_label, 0, 0, 1, 1)
+        self.__id = Gtk.SpinButton.new_with_range(min=0.0, max=9999999999.0, step=0.1)
+        self.__id.set_value(self.__cue.number)
+        self.__id.set_hexpand(True)
+        self.__id.set_halign(Gtk.Align.FILL)
+        grid.attach(self.__id, 1, 0, 1, 1)
+
         name_label = Gtk.Label("Name")
         name_label.set_halign(Gtk.Align.END)
-        grid.attach(name_label, 0, 0, 1, 1)
+        grid.attach(name_label, 0, 1, 1, 1)
         self.__name = Gtk.Entry()
         self.__name.set_text(self.__cue.name)
         self.__name.set_hexpand(True)
         self.__name.set_halign(Gtk.Align.FILL)
-        grid.attach(self.__name, 1, 0, 1, 1)
+        grid.attach(self.__name, 1, 1, 1, 1)
 
         desc_label = Gtk.Label("Description")
         desc_label.set_halign(Gtk.Align.END)
-        grid.attach(desc_label, 0, 1, 1, 1)
+        grid.attach(desc_label, 0, 2, 1, 1)
         self.__description = Gtk.Entry()
         self.__description.set_text(self.__cue.description)
         self.__description.set_hexpand(True)
         self.__description.set_halign(Gtk.Align.FILL)
-        grid.attach(self.__description, 1, 1, 1, 1)
+        grid.attach(self.__description, 1, 2, 1, 1)
 
         notes_label = Gtk.Label("Notes")
         notes_label.set_halign(Gtk.Align.END)
-        grid.attach(notes_label, 0, 2, 1, 1)
+        grid.attach(notes_label, 0, 3, 1, 1)
         self.__notes = Gtk.Entry()
         self.__notes.set_text(self.__cue.notes)
         self.__notes.set_hexpand(True)
         self.__notes.set_halign(Gtk.Align.FILL)
-        grid.attach(self.__notes, 1, 2, 1, 1)
+        grid.attach(self.__notes, 1, 3, 1, 1)
 
         prew_label = Gtk.Label("Pre-Wait Time")
         prew_label.set_halign(Gtk.Align.END)
-        grid.attach(prew_label, 0, 3, 1, 1)
+        grid.attach(prew_label, 0, 4, 1, 1)
         self.__prewait = TimePicker(self.__cue.pre_wait)
         self.__prewait.set_hexpand(True)
         self.__prewait.set_halign(Gtk.Align.FILL)
-        grid.attach(self.__prewait, 1, 3, 1, 1)
+        grid.attach(self.__prewait, 1, 4, 1, 1)
 
         postw_label = Gtk.Label("Post-Wait Time")
         postw_label.set_halign(Gtk.Align.END)
-        grid.attach(postw_label, 0, 4, 1, 1)
+        grid.attach(postw_label, 0, 5, 1, 1)
         self.__postwait = TimePicker(self.__cue.post_wait)
         self.__postwait.set_hexpand(True)
         self.__postwait.set_halign(Gtk.Align.FILL)
-        grid.attach(self.__postwait, 1, 4, 1, 1)
+        grid.attach(self.__postwait, 1, 5, 1, 1)
 
         if self.__editor:
             wrapper = Gtk.ScrolledWindow()
@@ -247,7 +255,7 @@ class SCCueDialog(Gtk.Dialog):
             wrapper.set_vexpand(True)
             wrapper.set_valign(Gtk.Align.FILL)
             wrapper.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
-            grid.attach(wrapper, 0, 5, 2, 1)
+            grid.attach(wrapper, 0, 6, 2, 1)
 
         self.get_content_area().pack_start(grid, True, True, 0)
         self.set_modal(True)
@@ -274,6 +282,7 @@ class SCCueDialog(Gtk.Dialog):
             self.__cue.notes = self.__notes.get_text().strip()
             self.__cue.pre_wait = self.__prewait.get_total_milliseconds()
             self.__cue.post_wait = self.__postwait.get_total_milliseconds()
+            self.__cue.number = self.__id.get_value()
 
             self.__cue.on_editor_closed(self.__editor, save=True)
         else:
