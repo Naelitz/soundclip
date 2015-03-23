@@ -418,12 +418,16 @@ class AudioCue(Cue):
         return self.__pbc.get_position()
 
     def on_pbc_duration_discovered(self, pbc, duration):
-        if duration != self.__duration_hint:
-            logger.warning("WARNING: Audio file may have changed on disk for {0}: Duration was {1}, got {2}".format(
-                self.__src, util.timefmt(self.__duration_hint), util.timefmt(duration)
-            ))
-        self.__duration_hint = duration
-        self.emit('update')
+        eps = abs(duration-self.__duration_hint)
+        if duration != self.__duration_hint and eps > self._project.max_duration_discovery_difference:
+            logger.warning(
+                "WARNING: Audio file may have changed on disk for {0}: Duration was {1}, got {2} (delta: {3}ms)".format(
+                    self.__src, util.timefmt(self.__duration_hint), util.timefmt(duration),
+                    abs(duration-self.__duration_hint)
+                )
+            )
+            self.__duration_hint = duration
+            self.emit('update')
 
     def get_editor(self):
         return AudioCue.Editor(self, self._project.root)

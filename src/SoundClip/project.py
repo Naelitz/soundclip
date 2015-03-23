@@ -54,9 +54,10 @@ class Project(GObject.GObject):
     panic_hard_stop_time = GObject.property(type=GObject.TYPE_LONG)
     current_hash = GObject.property(type=str)
     last_hash = GObject.property(type=str)
+    max_duration_discovery_difference = GObject.property(type=GObject.TYPE_LONG)
 
     def __init__(self, name="Untitled Project", creator="", root="", panic_fade_time=500, panic_hard_stop_time=1000,
-                 cue_stacks=None, current_hash=None, last_hash=None):
+                 cue_stacks=None, current_hash=None, last_hash=None, max_duration_discovery_difference=5):
         GObject.GObject.__init__(self)
         self.name = name
         self.creator = creator
@@ -66,6 +67,7 @@ class Project(GObject.GObject):
         self.panic_hard_stop_time = panic_hard_stop_time
         self.current_hash = current_hash
         self.last_hash = last_hash
+        self.max_duration_discovery_difference = max_duration_discovery_difference
         self.__dirty = True
 
         self.__logfile_handler = None
@@ -204,10 +206,12 @@ class Project(GObject.GObject):
         creator = j['creator'] if 'creator' in j else ""
         panic_fade_time = j['panicFadeTime'] if 'panicFadeTime' in j else 500
         panic_hard_stop_time = j['panicHardStopTime'] if 'panicHardStopTime' in j else 1000
+        eps = j['discoveryEpsilon'] if 'discoveryEpsilon' in j else 5
         last_hash = j['previousRevision'] if 'previousRevision' in j else None
 
         p = Project(name=name, creator=creator, root=path, cue_stacks=[], panic_fade_time=panic_fade_time,
-                    panic_hard_stop_time=panic_hard_stop_time, current_hash=sha(content), last_hash=last_hash)
+                    panic_hard_stop_time=panic_hard_stop_time, current_hash=sha(content), last_hash=last_hash,
+                    max_duration_discovery_difference=eps)
 
         if 'stacks' in j:
             for key in j['stacks']:
@@ -225,7 +229,7 @@ class Project(GObject.GObject):
             os.makedirs(self.__root)
 
         d = {'name': self.name, 'creator': self.creator, 'stacks': [], 'panicFadeTime': self.panic_fade_time,
-             'panicHardStopTime': self.panic_hard_stop_time}
+             'panicHardStopTime': self.panic_hard_stop_time, 'discoveryEpsilon': self.max_duration_discovery_difference}
 
         for stack in self.cue_stacks:
             d['stacks'].append(stack.store(self.__root))

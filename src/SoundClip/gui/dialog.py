@@ -130,6 +130,19 @@ class SCProjectPropertiesDialog(Gtk.Dialog):
         self.__panic_delta.set_halign(Gtk.Align.FILL)
         grid.attach(self.__panic_delta, 1, 5, 1, 1)
 
+        duration_difference_delta = Gtk.Label("Duration Difference Max Delta")
+        duration_difference_delta.set_halign(Gtk.Align.END)
+        duration_difference_delta.set_tooltip_text(
+            "Maximum length difference between audio files to count them as different files"
+        )
+        grid.attach(duration_difference_delta, 0, 6, 1, 1)
+        self.__duration_delta = TimePicker(
+            initial_milliseconds=self.__main_window.project.max_duration_discovery_difference
+        )
+        self.__duration_delta.set_hexpand(True)
+        self.__duration_delta.set_halign(Gtk.Align.FILL)
+        grid.attach(self.__duration_delta, 1, 6, 1, 1)
+
         # TODO: Previous Revisions
 
         self.get_content_area().pack_start(grid, True, True, 0)
@@ -162,6 +175,7 @@ class SCProjectPropertiesDialog(Gtk.Dialog):
             self.__main_window.project.creator = self.__creator.get_text()
             self.__main_window.project.panic_fade_time = self.__panic_fade_time.get_total_milliseconds()
             self.__main_window.project.panic_hard_stop_time = self.__panic_delta.get_total_milliseconds()
+            self.__main_window.project.max_duration_discovery_difference = self.__duration_delta.get_total_milliseconds()
             if self.__main_window.project.root != self.__root.get_text():
                 self.__main_window.project.change_root(self.__root.get_text())
                 self.__main_window.project.store()
