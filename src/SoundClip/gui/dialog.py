@@ -225,11 +225,18 @@ class SCCueDialog(Gtk.Dialog):
         notes_label = Gtk.Label("Notes")
         notes_label.set_halign(Gtk.Align.END)
         grid.attach(notes_label, 0, 3, 1, 1)
-        self.__notes = Gtk.Entry()
-        self.__notes.set_text(self.__cue.notes)
+        self.__text_buffer = Gtk.TextBuffer()
+        self.__text_buffer.set_text(self.__cue.notes)
+        self.__notes = Gtk.TextView.new_with_buffer(self.__text_buffer)
+        self.__notes.set_wrap_mode(Gtk.WrapMode.WORD)
         self.__notes.set_hexpand(True)
         self.__notes.set_halign(Gtk.Align.FILL)
-        grid.attach(self.__notes, 1, 3, 1, 1)
+        self.__notes.set_vexpand(True)
+        self.__notes.set_valign(Gtk.Align.FILL)
+        wrapper = Gtk.ScrolledWindow()
+        wrapper.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
+        wrapper.add(self.__notes)
+        grid.attach(wrapper, 1, 3, 1, 1)
 
         prew_label = Gtk.Label("Pre-Wait Time")
         prew_label.set_halign(Gtk.Align.END)
@@ -279,7 +286,11 @@ class SCCueDialog(Gtk.Dialog):
         if response == Gtk.ResponseType.OK:
             self.__cue.name = self.__name.get_text().strip()
             self.__cue.description = self.__description.get_text().strip()
-            self.__cue.notes = self.__notes.get_text().strip()
+            self.__cue.notes = self.__text_buffer.get_text(
+                self.__text_buffer.get_start_iter(),
+                self.__text_buffer.get_end_iter(),
+                True
+            )
             self.__cue.pre_wait = self.__prewait.get_total_milliseconds()
             self.__cue.post_wait = self.__postwait.get_total_milliseconds()
             self.__cue.number = self.__id.get_value()
