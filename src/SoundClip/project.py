@@ -134,7 +134,7 @@ class Project(GObject.GObject):
             self.__logfile_handler = RotatingFileHandler(
                 os.path.join(logpath, "soundclip.log"), backupCount=Project.__MAX_LOG_COUNT__
             )
-            self.__logfile_handler.setLevel(10)
+            self.__logfile_handler.setLevel(0)
             self.__logfile_handler.setFormatter(logging.Formatter(
                 fmt="%(asctime)s - [%(module)s | %(levelname)s]: %(message)s",
                 datefmt='%Y-%m-%d %I:%M:%S %p'
@@ -146,6 +146,7 @@ class Project(GObject.GObject):
 
     def close_logfile(self):
         if self.__logfile_handler is not None:
+            self.__logfile_handler.flush()
             logger.removeHandler(self.__logfile_handler)
             self.__logfile_handler = None
 
@@ -184,7 +185,6 @@ class Project(GObject.GObject):
         self.close_logfile()
 
         # TODO: Save project to disk if new
-        pass
 
     @staticmethod
     def load(path):

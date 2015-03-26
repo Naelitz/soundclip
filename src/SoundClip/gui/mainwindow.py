@@ -12,8 +12,6 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import logging
-from SoundClip.gui.widgets import TransportControls
-
 logger = logging.getLogger('SoundClip')
 
 from gi.repository import GObject, Gtk
@@ -21,6 +19,7 @@ from gi.repository import GObject, Gtk
 from SoundClip import __version__
 from SoundClip.gui.containers import SCCueListContainer
 from SoundClip.gui.menu import SCHeaderBar
+from SoundClip.gui.widgets import TransportControls
 from SoundClip.project import Project
 
 
@@ -51,8 +50,8 @@ class SCMainWindow(Gtk.Window):
 
         self.add(grid)
 
-        self.__project = Project() if project is None else project
-        self.change_project(self.__project)
+        self.__project = None
+        self.change_project(Project() if project is None else project)
 
         self.set_size_request(800, 600)
         self.connect("delete-event", self.on_close)

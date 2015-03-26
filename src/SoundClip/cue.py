@@ -800,7 +800,7 @@ def load_cue(root, key, project):
         return ret
 
     j = storage.read(root, key)
-    
+
     # Just warn on unknown cues instead
     # if 'type' not in j:
     #     raise MalformedCueException({
