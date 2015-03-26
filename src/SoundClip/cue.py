@@ -800,12 +800,14 @@ def load_cue(root, key, project):
         return ret
 
     j = storage.read(root, key)
-    if 'type' not in j:
-        raise MalformedCueException({
-            "message": "{0} does not specify a cue type".format(j['name'] if 'name' in j else "The cue being loaded"),
-            "key": key,
-            "root": root
-        })
+    
+    # Just warn on unknown cues instead
+    # if 'type' not in j:
+    #     raise MalformedCueException({
+    #         "message": "{0} does not specify a cue type".format(j['name'] if 'name' in j else "The cue being loaded"),
+    #         "key": key,
+    #         "root": root
+    #     })
 
     t = j['type'] if 'type' in j else 'unknown'
     logger.debug("Trying to load {0} which is of type {1}".format(key, t))

@@ -23,9 +23,9 @@ logger = logging.getLogger('SoundClip')
 from gi.repository import GLib, GObject, Gst, GstPbutils
 
 
-def fade_curve_linear(initial_vol, target_vol, start, duration, now, user_args):
+def fade_curve_linear(initial_vol, target_vol, start, duration, t, user_args):
     # Linear fade curve (Y = (M * (X - X_1))/Y_1)
-    return (((target_vol - initial_vol) / duration) * (now - start)) + initial_vol, now < start + duration
+    return (((target_vol - initial_vol) / duration) * (t - start)) + initial_vol, t < (start + duration)
 
 # TODO: Cubic and Bezier Fade Curves
 
@@ -49,9 +49,9 @@ class PlaybackController(GObject.Object):
             PlaybackController.discoverer = GstPbutils.Discoverer()
         if PlaybackController.async_discoverer is None:
             PlaybackController.async_discoverer = GstPbutils.Discoverer()
-            PlaybackController.async_discoverer.start()
             PlaybackController.async_discoverer.connect('starting', lambda *x: logger.debug("Async Discoverer starting"))
             PlaybackController.async_discoverer.connect('finished', lambda *x: logger.debug("Async Discoverer Finished"))
+            PlaybackController.async_discoverer.start()
 
     @staticmethod
     def is_file_supported(uri):
@@ -222,6 +222,7 @@ class PlaybackController(GObject.Object):
 
     def __stop(self):
         logger.debug("Playback stopped")
+        self.__fading = False
         self.__pipeline.set_state(Gst.State.NULL)
         self.reset()
 
