@@ -15,18 +15,16 @@
 
 import argparse
 import sys
+
 import logging
-
-from SoundClip.util import get_gtk_version
-
 logger = logging.getLogger('SoundClip')
-logger.setLevel(0)
 
 from gi.repository import Gtk, Gst
 
 from SoundClip import __version__
 from SoundClip.gui import mainwindow
 from SoundClip.project import Project
+from SoundClip.util import get_gtk_version
 
 
 def main():
@@ -75,7 +73,7 @@ def main():
 
 
 def init_logging(level):
-    logger.setLevel(level)
+    logger.setLevel(10)
 
     stream = logging.StreamHandler()
     stream.setLevel(level)

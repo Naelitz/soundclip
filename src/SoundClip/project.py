@@ -14,12 +14,12 @@
 import json
 import os
 
-from logging.handlers import RotatingFileHandler
 import logging
 logger = logging.getLogger('SoundClip')
 
 from enum import Enum
 from gi.repository import GObject
+from logging.handlers import RotatingFileHandler
 
 from SoundClip.cue import CueStack
 from SoundClip.exception import SCException
