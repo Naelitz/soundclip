@@ -30,6 +30,7 @@ from SoundClip.util import get_gtk_version
 def main():
     parser = argparse.ArgumentParser()
 
+    parser.add_argument("-n", "--no-dark-theme", help="Don't force the dark theme variant", action="store_true")
     parser.add_argument("-v", "--version", help="Display the version number and exit", action="store_true")
     parser.add_argument("-p", "--project", help="Specify the path to a project to open", type=str)
     parser.add_argument("-l", "--log", help="Specify the logging level to print", type=str, default="DEBUG")
@@ -51,7 +52,11 @@ def main():
     Gtk.init(sys.argv)
     Gst.init(sys.argv)
 
-    Gtk.Settings.get_default().set_property('gtk-application-prefer-dark-theme', True)
+    if not args.no_dark_theme:
+        logger.debug("Using Dark Theme variant")
+        Gtk.Settings.get_default().set_property('gtk-application-prefer-dark-theme', True)
+    else:
+        logger.debug("Sticking with light theme")
 
     p = None
     if args.project:
