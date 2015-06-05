@@ -8,6 +8,8 @@ SoundClip is currently under heavy, active development in an attempt to have it 
 in March. Right now, basic audio playback works, but is **NOT PRODUCTION READY** yet. I try to keep the [dev blog](http://techwiz24.github.io/soundclip)
 up to date, you can get the most recent project status update there.
 
+I'm considering re-writing it in java (which I am more familiar with).
+
 ## Planned Features
 Below is a list of features I want to add, listed in order of importance
 
@@ -37,7 +39,7 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-Productions (program output) and all related files are considered derivative works and are therefore not governed by this license. Projects you produce with this program are considered your own; you may do what you want with them as long as the copy-right notice is maintained if you distribute SoundClip along with them. It'd also be nice to mention SoundClip in your show booklet or to your colleagues, but that's up to you.
+Productions (program output) and all related files are considered **your own projects** and are therefore not governed by this license. Projects you produce with this program are considered your own; you may do what you want with them as long as the copy-right notice is maintained if you distribute SoundClip along with them. It'd also be nice to mention SoundClip in your show booklet or to your colleagues, but that's up to you.
 
 ## Running SoundClip
 Make sure you have `PyGObject` and the python `gstreamer` bindings installed. You will need `python3`
